@@ -22,7 +22,13 @@ sequenceDiagram
 
 ## PoC
 
-Текущий PoC - команда `ai-usage`, которая запускает реальные CLI Codex, Claude и Cursor, выводит доступную информацию по usage/limits и завершает runtime.
+Текущий PoC - команда `ai-usage`, которая одной командой получает доступную информацию по usage/limits для Codex, Claude и Cursor и завершает runtime.
+
+Методы:
+
+- Codex: CLI `/status`.
+- Claude: CLI `/usage`.
+- Cursor: внутренний `api2.cursor.sh` через токен `cursor agent login`; если API недоступен, fallback на `cursor agent about/status`.
 
 Запуск из репозитория:
 

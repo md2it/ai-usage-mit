@@ -20,7 +20,7 @@
 |---|---|---|---|---|
 | Официальный API | Предпочтительно, если доступен | Стабильность, понятная поддержка, низкие риски | Часто требует ключ, включение API или Enterprise-тариф | Cursor Enterprise; потенциально Codex/Claude/API-провайдеры |
 | CLI провайдера | Используется в PoC | Работает в минимальном пользовательском сценарии, использует уже настроенный CLI | Медленно, хрупкий TUI-парсинг, запрос может расходовать ресурсы | Codex, Claude; Cursor частично |
-| Локальный токен/клиентский backend | Перспективно для исследования | Может работать без отдельного API-ключа, использует существующий login | Неофициальный контракт, возможны изменения, нужен аккуратный security review | Cursor |
+| Локальный токен/клиентский backend | Используется в PoC для Cursor | Может работать без отдельного API-ключа, использует существующий login | Неофициальный контракт, возможны изменения, нужен аккуратный security review | Cursor |
 | Frontend/dashboard API через cookie | Research-only | Часто дает те же данные, что веб-интерфейс | Cookie - чувствительный секрет, высокий риск безопасности и ToS | Потенциально Codex, Claude, Cursor |
 | Наблюдение трафика | Research-only | Может помочь понять внутренние контракты | HTTPS, certificate pinning, высокий риск хрупкости и злоупотребления | Потенциально все |
 
@@ -30,7 +30,7 @@
 |---|---|---|---|
 | Codex | CLI `/status` | Реализовано в PoC | [codex/limits.md](codex/limits.md), [codex/cli.md](codex/cli.md) |
 | Claude | CLI `/usage` | Реализовано в PoC | [claude/limits.md](claude/limits.md), [claude/cli.md](claude/cli.md) |
-| Cursor | `cursor agent about/status`; usage через CLI не найден | Частично реализовано в PoC, usage требует другого метода | [cursor/limits.md](cursor/limits.md), [cursor/cli.md](cursor/cli.md), [cursor/api2-cursor-sh.md](cursor/api2-cursor-sh.md) |
+| Cursor | `api2.cursor.sh` `GetCurrentPeriodUsage` через токен Cursor Agent | Реализовано в PoC; `cursor agent about/status` остается fallback | [cursor/limits.md](cursor/limits.md), [cursor/cli.md](cursor/cli.md), [cursor/api2-cursor-sh.md](cursor/api2-cursor-sh.md) |
 
 ## Принципы выбора метода
 
