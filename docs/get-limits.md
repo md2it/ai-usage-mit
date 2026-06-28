@@ -31,9 +31,9 @@
 
 | Провайдер | Основной известный вариант | Статус | Документы |
 |---|---|---|---|
-| Codex | CLI `/status` | Реализовано в PoC | [codex/limits.md](codex/limits.md), [codex/cli.md](codex/cli.md) |
-| Claude | CLI `/usage` | Реализовано в PoC | [claude/limits.md](claude/limits.md), [claude/cli.md](claude/cli.md) |
-| Cursor | `api2.cursor.sh` `GetCurrentPeriodUsage` через токен Cursor Agent | Реализовано в PoC; `cursor agent about/status` остается fallback | [cursor/limits.md](cursor/limits.md), [cursor/cli.md](cursor/cli.md), [cursor/api2-cursor-sh.md](cursor/api2-cursor-sh.md) |
+| Codex | CLI `/status` | Реализовано в PoC | [providers/codex.md](providers/codex.md) |
+| Claude | CLI `/usage` | Реализовано в PoC | [providers/claude.md](providers/claude.md) |
+| Cursor | `api2.cursor.sh` `GetCurrentPeriodUsage` через токен Cursor Agent | Реализовано в PoC; `cursor agent about/status` остается fallback | [providers/cursor.md](providers/cursor.md), [references/cursor-api2-cursor-sh.md](references/cursor-api2-cursor-sh.md) |
 
 ## Принципы выбора метода
 
@@ -46,7 +46,7 @@
 
 ## Связанные документы
 
-- [runtime-schemas.md](runtime-schemas.md) - общая runtime-модель приложения.
-- [codex/limits.md](codex/limits.md) - способы получения лимитов Codex.
-- [claude/limits.md](claude/limits.md) - способы получения лимитов Claude.
-- [cursor/limits.md](cursor/limits.md) - способы получения лимитов Cursor.
+- [get-limits-from-provider-cli.md](get-limits-from-provider-cli.md) - техническая модель provider methods, которые получают данные через CLI/TUI провайдера.
+- [providers/codex.md](providers/codex.md) - способы получения лимитов Codex.
+- [providers/claude.md](providers/claude.md) - способы получения лимитов Claude.
+- [providers/cursor.md](providers/cursor.md) - способы получения лимитов Cursor.
