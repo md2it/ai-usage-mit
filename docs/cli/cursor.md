@@ -6,6 +6,10 @@
 - Ссылка на страницу о CLI, если найдена: https://cursor.com/install
 - Вес CLI: не указан в официальной документации; локально бинарь/обертка: 4.7K (/Applications/Cursor.app/Contents/Resources/app/bin/cursor)
 
+## CHECK
+- Проверить наличие CLI: `command -v cursor`
+- Проверить версию CLI: `cursor --version`
+
 ## INSTAL
 - Установить Cursor app с официального сайта: https://cursor.com
 - Встроенная CLI-обертка macOS app: `/Applications/Cursor.app/Contents/Resources/app/bin/cursor`

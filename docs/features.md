@@ -5,7 +5,7 @@
 - Просто прослойка между пользователем и Codex CLI
 - Shell команда `ai-usage` возвращает текущий ответ CLI Codex `/status` "как есть"
 
-## PoC Claude
+## ✅ PoC Claude
 - Аналогично, но Claude
 
 ## PoC Cursor

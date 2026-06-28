@@ -6,6 +6,10 @@
 - Ссылка на страницу о CLI, если найдена: https://code.claude.com/docs/en/setup
 - Вес CLI: не указан в официальной документации; локально бинарь/обертка: 60B (/opt/homebrew/bin/claude)
 
+## CHECK
+- Проверить наличие CLI: `command -v claude`
+- Проверить версию CLI: `claude --version`
+
 ## INSTAL
 - Native Install для macOS/Linux/WSL: `curl -fsSL https://claude.ai/install.sh | bash`
 - Native Install для Windows PowerShell: `irm https://claude.ai/install.ps1 | iex`

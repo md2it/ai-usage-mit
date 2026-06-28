@@ -6,6 +6,10 @@
 - Ссылка на страницу о CLI, если найдена: https://developers.openai.com/codex/cli
 - Вес CLI: не указан в официальной документации; локально бинарь/обертка: 46B (/opt/homebrew/bin/codex)
 
+## CHECK
+- Проверить наличие CLI: `command -v codex`
+- Проверить версию CLI: `codex --version`
+
 ## INSTAL
 - Standalone installer для macOS/Linux: `curl -fsSL https://chatgpt.com/codex/install.sh | sh`
 - Standalone installer для macOS/Linux, unattended: `curl -fsSL https://chatgpt.com/codex/install.sh | CODEX_NON_INTERACTIVE=1 sh`
