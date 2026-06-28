@@ -1,9 +1,15 @@
 # ФУНКЦИОНАЛ
 
-## PoC
+## ✅ PoC Codex
 - Предполагает, что уже есть CLI для Codex
 - Просто прослойка между пользователем и Codex CLI
 - Shell команда `ai-usage` возвращает текущий ответ CLI Codex `/status` "как есть"
+
+## PoC Claude
+- Аналогично, но Claude
+
+## PoC Cursor
+- Аналогично, но Cursor
 
 ## MVP
 - Предполагает, что уже есть CLI для Claude, Codex, Cursor
@@ -27,7 +33,7 @@
    - Должно решаться в 1 команду: установка CLI
    - Соответствующая документация для людей и агентов (En, Ru)
 - Mac
-   - Десктопное приложение Mac (Tauri + Rust ?)
+   - Десктопное приложение Mac (Tauri?)
    - Виджеты Mac
    - Системные уведормления
       - На каких цифрах задавать уведомления
@@ -43,7 +49,11 @@
    - Потом подумаем, что там анализировать
       - По провайдеру
       - По модели
-- Иные способы скачать
+- Via API
+   - Codex
+   - Claude
+   - Cursor
+- Иные способы установки
    - NPM?
    - Pip?
 - Windows
@@ -57,3 +67,36 @@
    - Несколько подписок одного провайдера
    - Аналитика другого устройства
    - Туннель?
+
+- Больше провайдеров
+   - OpenAI API.
+   - ChatGPT subscription usage, если данные доступны локально или через экспорт.
+   - Anthropic API.
+   - Claude Code.
+   - Google Gemini API.
+   - Gemini CLI.
+   - xAI API.
+   - Mistral API.
+   - Groq API.
+   - OpenRouter.
+   - Perplexity API.
+   - Cohere.
+   - Together AI.
+   - Fireworks AI.
+   - DeepSeek.
+   - Ollama.
+   - LM Studio.
+   - LocalAI.
+   - Azure OpenAI.
+   - AWS Bedrock.
+   - Google Vertex AI.
+   - Cursor.
+   - GitHub Copilot CLI/agentic tools, если доступна локальная статистика.
+   - Codex CLI.
+   - Aider.
+   - Continue.
+   - Cline/Roo Code.
+   - OpenCode.
+   - LiteLLM logs.
+   - LangChain/LangSmith exports, если нужен импорт.
+   - Custom provider через адаптер.
