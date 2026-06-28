@@ -18,11 +18,11 @@ sequenceDiagram
     App-->>User: Показывает лимиты
 ```
 
-Подробные runtime-схемы описаны в [docs/runtime-schemas.md](docs/runtime-schemas.md).
+Общая карта получения лимитов описана в [docs/get-limits.md](docs/get-limits.md), runtime-схемы - в [docs/runtime-schemas.md](docs/runtime-schemas.md).
 
 ## PoC
 
-Текущий PoC - команда `ai-usage`, которая запускает реальный Codex CLI, автоматически вызывает `/status`, выводит полученную информацию и завершает runtime.
+Текущий PoC - команда `ai-usage`, которая запускает реальные CLI Codex, Claude и Cursor, выводит доступную информацию по usage/limits и завершает runtime.
 
 Запуск из репозитория:
 
@@ -30,4 +30,4 @@ sequenceDiagram
 ./bin/ai-usage
 ```
 
-По умолчанию команда использует стандартный запуск `codex`. Для работы нужен установленный Codex CLI.
+По умолчанию команда использует стандартные команды `codex`, `claude` и `cursor`. Для работы нужны установленные CLI нужных провайдеров.

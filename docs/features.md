@@ -6,10 +6,10 @@
 - Shell команда `ai-usage` возвращает текущий ответ CLI Codex `/status` "как есть"
 
 ## ✅ PoC Claude
-- Аналогично, но Claude
+- Аналогично, но Claude CLI
 
-## PoC Cursor
-- Аналогично, но Cursor
+## ❌ PoC Cursor
+- Аналогично, но Cursor -- для Cursor не сработало
 
 ## MVP
 - Предполагает, что уже есть CLI для Claude, Codex, Cursor
