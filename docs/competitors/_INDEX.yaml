@@ -13,7 +13,7 @@ kind: competitors-index
 # - Each competitor contains only a short index card.
 # - Name is a human-readable competitor name.
 # - Icons is a compact human-readable quick-scan field:
-#   ⭐️ good tool; ❓ unclear/no conclusion; 🥴 weak tool; 👀 needs attention; 🆕 new/not researched.
+#   ⭐️ good tool; ❓ unclear/no conclusion; 🤷‍♂️ not relevant; 👀 needs attention; 🆕 new/not researched.
 # - Status is one of [not_researched, docs_reviewed, hands_on].
 # - Document must match the competitor ID: {id}.md.
 # - URL is the primary competitor URL.
@@ -22,52 +22,6 @@ kind: competitors-index
 # - Details, comparison, sources and custom sections are maintained in document.
 
 competitors:
-  router-for-me:
-    name: Router-For.ME
-    icons: "🥴"
-    status: docs_reviewed
-    document: router-for-me.md
-    url: https://github.com/router-for-me
-    supported_interfaces: [cli, api]
-    summary: >
-      Open-source proxy server (CLIProxyAPI, 38,618 stars, v7.2.44 as of 2026-06-28) that
-      wraps Claude Code, Codex, Gemini CLI, Grok Build, and Antigravity behind unified
-      OpenAI-compatible API endpoints with multi-account load balancing. Focused on
-      access/routing, not observability. Usage tracking permanently removed in v6.10.0
-      ("chore: remove usage tracking and logging functionality",
-      https://github.com/router-for-me/CLIProxyAPI/releases/tag/v6.10.0);
-      feature-request issues #3444 and #3481 closed "Not planned" May 2026.
-      Low-Medium competitive threat.
-
-  cpa-manager-plus:
-    name: CPA-Manager-Plus
-    icons: "🥴"
-    status: docs_reviewed
-    document: cpa-manager-plus.md
-    url: https://github.com/seakee/CPA-Manager-Plus
-    supported_interfaces: [macos, windows, linux]
-    summary: >
-      Free MIT-licensed self-hosted ops dashboard (944 stars) tightly coupled to
-      CLIProxyAPI. Adds SQLite request ledger, cost/token analytics by model/key/project,
-      Codex quota inspection, and plugin ecosystem on top of CPA. Useless without CPA —
-      no standalone value. Primary audience: Chinese-speaking self-hosters. Low competitive
-      threat unless ai-usage-mit targets the same CPA analytics niche.
-
-  cpa-usage-keeper:
-    name: CPA Usage Keeper
-    icons: "👀"
-    status: docs_reviewed
-    document: cpa-usage-keeper.md
-    url: https://github.com/Willxup/cpa-usage-keeper
-    supported_interfaces: [api]
-    summary: >
-      Open-source observability sidecar (MIT, 818 stars) for CLIProxyAPI — not a standalone
-      product. Consumes CPA's Redis usage queue into SQLite and serves a built-in React
-      dashboard with cost tracking, latency diagnostics, credential health, and CSV/JSON
-      export. Requires CLIProxyAPI (`CPA_BASE_URL` mandatory); cannot run independently.
-      Very active: 55 releases, v1.12.1 on 2026-06-26. Medium competitive threat for the
-      CLIProxyAPI user segment specifically.
-
   ccusage:
     name: ccusage
     icons: "⭐️ 👀"
@@ -98,7 +52,7 @@ competitors:
 
   claude-usage:
     name: claude-usage (phuryn)
-    icons: "👀"
+    icons: "⭐️ 👀"
     status: docs_reviewed
     document: claude-usage.md
     url: https://github.com/phuryn/claude-usage
@@ -109,6 +63,35 @@ competitors:
       for Pro/Max, and VS Code extension. Claude Code only; no burn-rate prediction.
       Medium competitive threat — same audience, local-first approach, and web UI are
       strengths, but limited to Claude Code and less actively maintained.
+
+  cpa-manager-plus:
+    name: CPA-Manager-Plus
+    icons: "🤷‍♂️"
+    status: docs_reviewed
+    document: cpa-manager-plus.md
+    url: https://github.com/seakee/CPA-Manager-Plus
+    supported_interfaces: [macos, windows, linux]
+    summary: >
+      Free MIT-licensed self-hosted ops dashboard (944 stars) tightly coupled to
+      CLIProxyAPI. Adds SQLite request ledger, cost/token analytics by model/key/project,
+      Codex quota inspection, and plugin ecosystem on top of CPA. Useless without CPA —
+      no standalone value. Primary audience: Chinese-speaking self-hosters. Low competitive
+      threat unless ai-usage-mit targets the same CPA analytics niche.
+
+  cpa-usage-keeper:
+    name: CPA Usage Keeper
+    icons: "👀"
+    status: docs_reviewed
+    document: cpa-usage-keeper.md
+    url: https://github.com/Willxup/cpa-usage-keeper
+    supported_interfaces: [api]
+    summary: >
+      Open-source observability sidecar (MIT, 818 stars) for CLIProxyAPI — not a standalone
+      product. Consumes CPA's Redis usage queue into SQLite and serves a built-in React
+      dashboard with cost tracking, latency diagnostics, credential health, and CSV/JSON
+      export. Requires CLIProxyAPI (`CPA_BASE_URL` mandatory); cannot run independently.
+      Very active: 55 releases, v1.12.1 on 2026-06-26. Medium competitive threat for the
+      CLIProxyAPI user segment specifically.
 
   llmeter:
     name: LLMeter
@@ -123,3 +106,20 @@ competitors:
       API keys. No local-file or CLI subscription awareness — cannot track Claude Code /
       Codex quota consumption. Low-Medium threat: different data source and audience
       (API cost watchers, not CLI subscription users); risk is positioning overlap only.
+
+  router-for-me:
+    name: Router-For.ME
+    icons: "🤷‍♂️"
+    status: docs_reviewed
+    document: router-for-me.md
+    url: https://github.com/router-for-me
+    supported_interfaces: [cli, api]
+    summary: >
+      Open-source proxy server (CLIProxyAPI, 38,618 stars, v7.2.44 as of 2026-06-28) that
+      wraps Claude Code, Codex, Gemini CLI, Grok Build, and Antigravity behind unified
+      OpenAI-compatible API endpoints with multi-account load balancing. Focused on
+      access/routing, not observability. Usage tracking permanently removed in v6.10.0
+      ("chore: remove usage tracking and logging functionality",
+      https://github.com/router-for-me/CLIProxyAPI/releases/tag/v6.10.0);
+      feature-request issues #3444 and #3481 closed "Not planned" May 2026.
+      Low-Medium competitive threat.
