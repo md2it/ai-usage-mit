@@ -28,4 +28,5 @@ coverage/
 *.sqlite
 *.sqlite3
 *.db
+.local/
 .runtime/

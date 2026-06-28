@@ -72,7 +72,7 @@ Internal layers: Service Coordinator → HTTP API Server → Auth Managers → M
 - Sponsor integrations with third-party relay services (PackyCode, AICodeMirror, BmoPlus) offer paid discounted access as an alternative to self-hosting.
 - A separate `CLIProxyAPIBusiness` repo exists; commercial terms are not public.
 
-## COMPARE TO US
+## COMPARISON WITH AI-USAGE-MIT
 
 ### Similar
 
