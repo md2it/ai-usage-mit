@@ -25,6 +25,7 @@ Goal: answer the required `_INDEX.yaml` comparison questions from documentation:
 
 - `compare.supported_interfaces`
 - `compare.providers`
+- `compare.capabilities`
 - `compare.notifications`
 - `compare.hard_stop`
 - `compare.conclusion`
@@ -49,6 +50,7 @@ Goal: verify the uncertain `_INDEX.yaml` comparison questions by running the pro
 
 - `compare.supported_interfaces`
 - `compare.providers`
+- `compare.capabilities`
 - `compare.notifications`
 - `compare.hard_stop`
 - `compare.conclusion`
@@ -61,7 +63,7 @@ Goal: verify the uncertain `_INDEX.yaml` comparison questions by running the pro
 4. Record hands-on findings in the reference document.
    - Separate actual usage from docs, marketing pages, README files, and changelogs.
    - Note what the UI exposes, what works, what is missing, and what differs from docs.
-   - Put additional relevant nuances into the appropriate `{id}.md` sections; keep `_INDEX.yaml` focused on `compare` and `summary`.
+   - Put additional relevant nuances into the appropriate `{id}.md` sections; keep `_INDEX.yaml` focused on `compare` (including `capabilities`) and `summary`.
 5. Give the user a short summary.
    - What was installed and tested.
    - What was observed.
@@ -107,6 +109,7 @@ Rules:
 - Update `compare` after research:
   - `supported_interfaces` — array of supported interfaces, for example `cli`, `api`, `macos`, `windows`, `linux`, `android`, `iphone`.
   - `providers` — array of supported providers or data sources, for example `Claude`, `Cursor`, `Codex`, `Mistral`.
+  - `capabilities` — array of verified feature tags from the closed vocabulary in `_INDEX.yaml` header comments (`usage`, `limits`, `session_limits`, `reset`, `credits`, `cost`, `burn_rate`, `forecast`, `usage_history`). Use `[]` when none are confirmed. List the union of what the tool exposes; put provider-specific gaps in `summary`.
   - `notifications` — `true`, `false`, or `null` if not checked.
   - `hard_stop` — `true`, `false`, or `null` if not checked. Use this for hard spend/usage stop or enforced limit-control capabilities.
   - `conclusion` — one final visual research outcome:
@@ -115,4 +118,4 @@ Rules:
     - `🤷‍♂️` — not relevant to ai-usage-mit, even if the tool itself may be good.
     - `❓` — unclear; research did not produce a confident conclusion.
     - `👀` — needs further research.
-- Write `summary` in 2–4 lines: what it does, key differentiator vs. ai-usage-mit, and reference relevance. Include verbatim quotes for critical facts.
+- Write `summary` in 2–4 lines: what it does, data source, key differentiator vs. ai-usage-mit, and reference relevance. Do not repeat `capabilities` tags; use `summary` for scope caveats (e.g. provider-only coverage). Include verbatim quotes for critical facts.

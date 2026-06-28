@@ -13,11 +13,24 @@ kind: references-index
 # - Compare is a quick product-coverage signal filled after research:
 #   - supported_interfaces: array of [cli, api, web, vscode, macos, windows, linux, android, iphone].
 #   - providers: supported providers, tools, or data sources relevant to usage/spending tracking.
+#   - capabilities: verified feature tags only; use [] when none confirmed. Closed vocabulary:
+#     - usage — current or accumulated consumption (tokens, requests, sessions, messages).
+#     - limits — subscription or plan quota cap / progress (% used, plan allowance).
+#     - session_limits — billing or session window caps (e.g. Claude 5h block), not full plan quota.
+#     - reset — quota window reset time or countdown.
+#     - credits — prepaid or API credit balance, separate from subscription quota.
+#     - cost — estimated or actual monetary cost.
+#     - burn_rate — consumption velocity (tokens/min, $/hour).
+#     - forecast — predicted limit-hit time or projected exhaustion.
+#     - usage_history — historical reports (daily, weekly, monthly, session archives).
+#     List the union of what the tool exposes anywhere; provider-specific gaps go in summary, not here.
+#     At docs_reviewed: from documentation only. At hands_on: prefer verified runtime behavior.
 #   - notifications: true/false when verified, null when not checked.
 #   - hard_stop: true/false when verified, null when not checked. Use for enforced spend/usage stop or limit-control capabilities.
 #   - conclusion: final visual research outcome, one of [💎, 👍, 🤷‍♂️, ❓, 👀].
 #     💎 ideal; 👍 good; 🤷‍♂️ not relevant; ❓ unclear; 👀 needs more research.
-# - Summary is a short human-readable description.
+# - Summary is a short human-readable description (positioning, data source, relevance vs ai-usage-mit).
+#   Do not repeat capability tags; use summary for scope caveats (e.g. "Claude only", "Codex: usage only").
 # - Details, comparison, sources and custom sections are maintained in document.
 
 references:
@@ -30,6 +43,7 @@ references:
     compare:
       supported_interfaces: [cli]
       providers: [Claude, Codex, Gemini]
+      capabilities: []
       notifications: false
       hard_stop: false
       conclusion: 👍
@@ -51,6 +65,7 @@ references:
     compare:
       supported_interfaces: [cli]
       providers: [Claude]
+      capabilities: []
       notifications: false
       hard_stop: false
       conclusion: 👍
@@ -71,6 +86,7 @@ references:
     compare:
       supported_interfaces: [cli, web, vscode]
       providers: [Claude]
+      capabilities: []
       notifications: false
       hard_stop: false
       conclusion: 👍
@@ -92,6 +108,7 @@ references:
     compare:
       supported_interfaces: [macos, windows, linux]
       providers: [CLIProxyAPI, Codex]
+      capabilities: []
       notifications: null
       hard_stop: null
       conclusion: 👀
@@ -111,6 +128,7 @@ references:
     compare:
       supported_interfaces: [api]
       providers: [CLIProxyAPI]
+      capabilities: []
       notifications: null
       hard_stop: null
       conclusion: 👀
@@ -131,6 +149,7 @@ references:
     compare:
       supported_interfaces: [api]
       providers: [OpenAI, Anthropic, Google AI, DeepSeek, OpenRouter, Mistral]
+      capabilities: []
       notifications: null
       hard_stop: false
       conclusion: 👀
@@ -150,6 +169,7 @@ references:
     compare:
       supported_interfaces: [cli, api]
       providers: [Claude, Codex, Gemini, Grok, Antigravity]
+      capabilities: []
       notifications: false
       hard_stop: false
       conclusion: 👀
