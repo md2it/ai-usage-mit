@@ -15,6 +15,8 @@
 - CLI reports for today, week, and stats worked and showed model split, token categories, session count, project name, and estimated API cost.
 - The local dashboard served successfully when local port binding was allowed.
 - Dashboard API aggregates and UI controls were confirmed from local behavior and source.
+- Additional provider check on 2026-06-28 scanned real local Codex JSONL files from `~/.codex`, but added 0 turns, saw 0 sessions, and reported `$0.0000` cost.
+- Control run against real `~/.claude` in the same setup added 15,556 turns, saw 167 sessions, and showed Claude cost for today.
 - Chart rendering depends on CDN access unless Chart.js is cached or vendored.
 - A separate Pro/Max subscription quota progress bar was not found in the tested dashboard code or rendered HTML.
 
@@ -80,6 +82,14 @@ The tested path used the cloned repository directly with `python3 cli.py`. It wo
 
 The tool scanned Claude Code-style JSONL transcripts from the provided `--projects-dir` into a local SQLite database specified by `CLAUDE_USAGE_DB`.
 
+Additional provider check on 2026-06-28:
+
+- Real local Codex data exists at `/Users/alekseyterekhov/.codex`
+- `CLAUDE_USAGE_DB=... python3 cli.py scan --projects-dir /Users/alekseyterekhov/.codex` enumerated many Codex JSONL files, including `archived_sessions`, `sessions`, `history.jsonl`, and `session_index.jsonl`
+- Despite enumerating those files, the scan summary was `Turns added: 0` and `Sessions seen: 0`
+- `python3 cli.py stats` on the Codex database returned `Total sessions: 0`, `Total turns: 0`, and `Est. total cost: $0.0000`
+- Control run against `/Users/alekseyterekhov/.claude` returned `Turns added: 15556`, `Sessions seen: 167`, and today's Claude model cost
+
 ### Verified behavior
 
 - `python3 cli.py scan --projects-dir /private/tmp/claude-usage-handson/projects` added 2 turns / 1 session to SQLite.
@@ -92,6 +102,7 @@ The tool scanned Claude Code-style JSONL transcripts from the provided `--projec
 
 - Dashboard HTML loads Chart.js from `https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js`; server and data are local, but chart rendering depends on CDN access unless cached or changed.
 - No separate Pro/Max subscriber quota progress bar was found in current dashboard code or rendered HTML. The README says "Pro and Max subscribers get a progress bar", but the observed app exposes token/cost dashboarding rather than a visible subscription quota progress bar.
+- Multi-provider support was not observed in behavior. The scanner can walk a Codex directory, but it does not extract Codex turns, token totals, cost, limits, or reset information from the tested Codex JSONL data.
 - VS Code extension was not installed in VS Code during this hands-on pass.
 - Homebrew formula was inspected but not installed.
 

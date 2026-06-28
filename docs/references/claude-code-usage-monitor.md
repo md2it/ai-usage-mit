@@ -16,6 +16,8 @@
 - Live Rich terminal UI was confirmed with cost, token, and message progress bars, reset time, model distribution, burn rate, cost rate, and predictions.
 - Burn rate and prediction were confirmed on real local data.
 - Local history fields were returned by the CLI.
+- Additional provider check on 2026-06-28 passed real `~/.codex` as `--data-paths`; the tool completed but returned zero tokens/cost, `status.label=no_active_session`, and no limits or forecast.
+- Control run against real `~/.claude` in the same setup returned active Claude usage, cost, reset time, burn rate, and forecast.
 - Cost usage and cost-rate estimates were observed, but a separate alert workflow was not triggered.
 - Long-term retention behavior was not verified.
 
@@ -78,6 +80,13 @@ The tested install used a local virtualenv and the PyPI package `claude-monitor=
 
 With `--data-paths /Users/alekseyterekhov/.claude`, the tool reported `source.kind=claude_code_jsonl` and parsed local Claude Code data. With no Claude JSONL in the provided `.claude` directory, the tool returned `status.label=no_active_session`, zero tokens, and no forecast.
 
+Additional provider check on 2026-06-28:
+
+- Real local Codex data exists at `/Users/alekseyterekhov/.codex`
+- `claude-monitor --once --output json --data-paths /Users/alekseyterekhov/.codex` returned `source.kind=claude_code_jsonl`, `local.tokens.total_tokens=0`, `local.cost_usd=0.0`, `local_history.total_tokens=0`, `local_history.total_cost_usd=0`, `limits.five_hour.used_percentage=null`, and `status.label=no_active_session`
+- The same command against `/Users/alekseyterekhov/.claude` returned active Claude usage with `local.cost_usd`, `burn_rate_tokens_per_minute`, `burn_rate_cost_per_hour`, five-hour reset time, and forecast
+- `--help` described `--data-paths` as Claude data directories and `--api` as an experimental Anthropic OAuth usage API; no Codex, Gemini, OpenAI, Google, or generic provider option was exposed
+
 ### Verified behavior
 
 - `--help` exposed plans (`pro`, `max5`, `max20`, `team`, `custom`), views (`realtime`, `daily`, `monthly`, `session`, `entries`, `sessions`, `burn-rate`), one-shot output (`rich`, `json`, `text`, `csv`), `--statusline`, `--write-state`, experimental `--api`, and opt-in `--warehouse`.
@@ -90,7 +99,8 @@ With `--data-paths /Users/alekseyterekhov/.claude`, the tool reported `source.ki
 
 - Budget alerts / cost projections were only partially confirmed. UI and JSON showed cost usage, cost rate, and cost-based session limit estimates; no separate alert workflow was triggered during the short test.
 - Versioned local history surviving Claude cleanup was not directly verified. The CLI exposes `--warehouse` and can create a warehouse file, but long-term retention behavior was not tested.
-- Multi-provider support was not present in tested CLI surface; the only model filter option seen was `--filter-models {all,anthropic}`.
+- Multi-provider support was not present in tested CLI surface or behavior. Passing real Codex data through `--data-paths` did not produce Codex usage, cost, limits, or forecasts.
+- The only model filter option seen was `--filter-models {all,anthropic}`; this is a Claude Code Router-style model filter, not provider support.
 - Web or VS Code UI was not seen.
 - The CLI writes under `~/.claude-monitor` by default, even for `--once`. In the sandboxed first run it failed with `PermissionError` when it could not create `/Users/alekseyterekhov/.claude-monitor`.
 

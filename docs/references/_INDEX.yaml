@@ -11,7 +11,7 @@ kind: references-index
 #   - document: must match the reference ID: {id}.md.
 #   - link: primary reference URL.
 # - Compare is a quick product-coverage signal filled after research:
-#   - supported_interfaces: array of [cli, api, macos, windows, linux, android, iphone].
+#   - supported_interfaces: array of [cli, api, web, vscode, macos, windows, linux, android, iphone].
 #   - providers: supported providers, tools, or data sources relevant to usage/spending tracking.
 #   - notifications: true/false when verified, null when not checked.
 #   - hard_stop: true/false when verified, null when not checked. Use for enforced spend/usage stop or limit-control capabilities.
@@ -24,7 +24,7 @@ references:
   ccusage:
     meta:
       name: ccusage
-      status: docs_reviewed
+      status: hands_on
       document: ccusage.md
       link: https://github.com/ryoppippi/ccusage
     compare:
@@ -36,14 +36,16 @@ references:
     summary: >
       Open-source CLI tool (MIT, 14,100 stars) that reads local JSONL telemetry from
       Claude Code, Codex, Gemini CLI, and 15+ other tools, generating daily/weekly/monthly
-      usage reports. Zero-install via `npx ccusage`. Does NOT track subscription quota,
-      reset countdowns, or burn-rate predictions. High reference relevance — same local-file
-      strategy and multi-tool scope as ai-usage-mit, but misses the quota/limit core.
+      usage reports. Hands-on confirmed Codex token/cost output and Claude active-block
+      projections; Gemini namespace exists but no local Gemini data was available to verify
+      cost extraction. Does NOT expose subscription quota or reset countdown for Codex/Gemini.
+      High reference relevance — same local-file strategy and multi-tool scope as ai-usage-mit,
+      but misses the cross-provider quota/limit core.
 
   claude-code-usage-monitor:
     meta:
       name: Claude-Code-Usage-Monitor
-      status: docs_reviewed
+      status: hands_on
       document: claude-code-usage-monitor.md
       link: https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor
     compare:
@@ -55,28 +57,31 @@ references:
     summary: >
       Open-source real-time terminal monitor (8,300 stars) for Claude Code usage with
       Rich UI, burn-rate tracking, and session limit predictions ("will I hit my limit?").
-      Claude Code only — no Codex, Gemini CLI, or other tools. High reference relevance
-      for the Claude Code segment specifically; ai-usage-mit differentiates via
-      multi-tool support and polished UI.
+      Hands-on confirmed Claude cost/reset/forecast output and confirmed that real `~/.codex`
+      data produced zero usage/cost/limits. Claude Code only — no Codex, Gemini CLI, or other
+      tools. High reference relevance for the Claude Code segment specifically; ai-usage-mit
+      differentiates via multi-tool support and polished UI.
 
   claude-usage:
     meta:
       name: claude-usage (phuryn)
-      status: docs_reviewed
+      status: hands_on
       document: claude-usage.md
       link: https://github.com/phuryn/claude-usage
     compare:
-      supported_interfaces: [api, macos, windows, linux]
+      supported_interfaces: [cli, web, vscode]
       providers: [Claude]
       notifications: false
       hard_stop: false
       conclusion: 👍
     summary: >
       Open-source local web dashboard (~1,600 stars) for Claude Code usage history.
-      Localhost:8080 SPA with Chart.js charts, 30s auto-refresh, usage progress bar
-      for Pro/Max, and VS Code extension. Claude Code only; no burn-rate prediction.
-      Medium reference relevance — same audience, local-first approach, and web UI are
-      strengths, but limited to Claude Code and less actively maintained.
+      Localhost:8080 SPA with Chart.js charts, 30s auto-refresh, and VS Code extension.
+      README claims a Pro/Max usage progress bar, but it was not found hands-on. Hands-on
+      confirmed real Codex JSONL files are enumerated but produce 0 turns/sessions/cost,
+      while real Claude data is parsed. Claude Code only; no burn-rate prediction or
+      cross-provider limits. Medium reference relevance — same audience, local-first approach,
+      and web UI are strengths, but limited to Claude Code and less actively maintained.
 
   cpa-manager-plus:
     meta:
