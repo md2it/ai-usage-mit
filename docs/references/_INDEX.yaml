@@ -1,5 +1,5 @@
 version: 1
-kind: competitors-index
+kind: references-index
 
 # Language:
 # - This index is maintained in English.
@@ -8,32 +8,40 @@ kind: competitors-index
 #
 # Format:
 # - Use null for empty field values.
-# - Competitors is a required object.
-# - Each key inside competitors is a stable competitor ID.
-# - Each competitor contains only a short index card.
-# - Name is a human-readable competitor name.
+# - References is a required object.
+# - Each key inside references is a stable reference ID.
+# - Each reference contains only a short index card.
+# - Name is a human-readable reference name.
 # - Icons is a compact human-readable quick-scan field:
 #   ⭐️ good tool; ❓ unclear/no conclusion; 🤷‍♂️ not relevant; 👀 needs attention; 🆕 new/not researched.
 # - Status is one of [not_researched, docs_reviewed, hands_on].
-# - Document must match the competitor ID: {id}.md.
-# - URL is the primary competitor URL.
-# - Supported interfaces is an array of [cli, api, macos, windows, linux, android, iphone].
+# - Document must match the reference ID: {id}.md.
+# - URL is the primary reference URL.
+# - Compare is a quick product-coverage signal filled after research:
+#   - supported_interfaces: array of [cli, api, macos, windows, linux, android, iphone].
+#   - providers: supported providers, tools, or data sources relevant to usage/spending tracking.
+#   - notifications: true/false when verified, null when not checked.
+#   - hard_stop: true/false when verified, null when not checked. Use for enforced spend/usage stop or limit-control capabilities.
 # - Summary is a short human-readable description.
 # - Details, comparison, sources and custom sections are maintained in document.
 
-competitors:
+references:
   ccusage:
     name: ccusage
     icons: "⭐️ 👀"
     status: docs_reviewed
     document: ccusage.md
     url: https://github.com/ryoppippi/ccusage
-    supported_interfaces: [cli]
+    compare:
+      supported_interfaces: [cli]
+      providers: [Claude, Codex, Gemini]
+      notifications: false
+      hard_stop: false
     summary: >
       Open-source CLI tool (MIT, 14,100 stars) that reads local JSONL telemetry from
       Claude Code, Codex, Gemini CLI, and 15+ other tools, generating daily/weekly/monthly
       usage reports. Zero-install via `npx ccusage`. Does NOT track subscription quota,
-      reset countdowns, or burn-rate predictions. High competitive threat — same local-file
+      reset countdowns, or burn-rate predictions. High reference relevance — same local-file
       strategy and multi-tool scope as ai-usage-mit, but misses the quota/limit core.
 
   claude-code-usage-monitor:
@@ -42,11 +50,15 @@ competitors:
     status: docs_reviewed
     document: claude-code-usage-monitor.md
     url: https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor
-    supported_interfaces: [cli]
+    compare:
+      supported_interfaces: [cli]
+      providers: [Claude]
+      notifications: false
+      hard_stop: false
     summary: >
       Open-source real-time terminal monitor (8,300 stars) for Claude Code usage with
       Rich UI, burn-rate tracking, and session limit predictions ("will I hit my limit?").
-      Claude Code only — no Codex, Gemini CLI, or other tools. High competitive threat
+      Claude Code only — no Codex, Gemini CLI, or other tools. High reference relevance
       for the Claude Code segment specifically; ai-usage-mit differentiates via
       multi-tool support and polished UI.
 
@@ -56,12 +68,16 @@ competitors:
     status: docs_reviewed
     document: claude-usage.md
     url: https://github.com/phuryn/claude-usage
-    supported_interfaces: [api, macos, windows, linux]
+    compare:
+      supported_interfaces: [api, macos, windows, linux]
+      providers: [Claude]
+      notifications: false
+      hard_stop: false
     summary: >
       Open-source local web dashboard (~1,600 stars) for Claude Code usage history.
       Localhost:8080 SPA with Chart.js charts, 30s auto-refresh, usage progress bar
       for Pro/Max, and VS Code extension. Claude Code only; no burn-rate prediction.
-      Medium competitive threat — same audience, local-first approach, and web UI are
+      Medium reference relevance — same audience, local-first approach, and web UI are
       strengths, but limited to Claude Code and less actively maintained.
 
   cpa-manager-plus:
@@ -70,13 +86,17 @@ competitors:
     status: docs_reviewed
     document: cpa-manager-plus.md
     url: https://github.com/seakee/CPA-Manager-Plus
-    supported_interfaces: [macos, windows, linux]
+    compare:
+      supported_interfaces: [macos, windows, linux]
+      providers: [CLIProxyAPI, Codex]
+      notifications: null
+      hard_stop: null
     summary: >
       Free MIT-licensed self-hosted ops dashboard (944 stars) tightly coupled to
       CLIProxyAPI. Adds SQLite request ledger, cost/token analytics by model/key/project,
       Codex quota inspection, and plugin ecosystem on top of CPA. Useless without CPA —
-      no standalone value. Primary audience: Chinese-speaking self-hosters. Low competitive
-      threat unless ai-usage-mit targets the same CPA analytics niche.
+      no standalone value. Primary audience: Chinese-speaking self-hosters. Low reference
+      relevance unless ai-usage-mit targets the same CPA analytics niche.
 
   cpa-usage-keeper:
     name: CPA Usage Keeper
@@ -84,13 +104,17 @@ competitors:
     status: docs_reviewed
     document: cpa-usage-keeper.md
     url: https://github.com/Willxup/cpa-usage-keeper
-    supported_interfaces: [api]
+    compare:
+      supported_interfaces: [api]
+      providers: [CLIProxyAPI]
+      notifications: null
+      hard_stop: null
     summary: >
       Open-source observability sidecar (MIT, 818 stars) for CLIProxyAPI — not a standalone
       product. Consumes CPA's Redis usage queue into SQLite and serves a built-in React
       dashboard with cost tracking, latency diagnostics, credential health, and CSV/JSON
       export. Requires CLIProxyAPI (`CPA_BASE_URL` mandatory); cannot run independently.
-      Very active: 55 releases, v1.12.1 on 2026-06-26. Medium competitive threat for the
+      Very active: 55 releases, v1.12.1 on 2026-06-26. Medium reference relevance for the
       CLIProxyAPI user segment specifically.
 
   llmeter:
@@ -99,12 +123,16 @@ competitors:
     status: docs_reviewed
     document: llmeter.md
     url: https://llmeter.app
-    supported_interfaces: [api]
+    compare:
+      supported_interfaces: [api]
+      providers: [OpenAI, Anthropic, Google AI, DeepSeek, OpenRouter, Mistral]
+      notifications: null
+      hard_stop: false
     summary: >
       Open-source multi-provider AI billing dashboard that reads from provider billing
       APIs (OpenAI, Anthropic, Google AI, DeepSeek, OpenRouter, Mistral) using read-only
       API keys. No local-file or CLI subscription awareness — cannot track Claude Code /
-      Codex quota consumption. Low-Medium threat: different data source and audience
+      Codex quota consumption. Low-Medium relevance: different data source and audience
       (API cost watchers, not CLI subscription users); risk is positioning overlap only.
 
   router-for-me:
@@ -113,7 +141,11 @@ competitors:
     status: docs_reviewed
     document: router-for-me.md
     url: https://github.com/router-for-me
-    supported_interfaces: [cli, api]
+    compare:
+      supported_interfaces: [cli, api]
+      providers: [Claude, Codex, Gemini, Grok, Antigravity]
+      notifications: false
+      hard_stop: false
     summary: >
       Open-source proxy server (CLIProxyAPI, 38,618 stars, v7.2.44 as of 2026-06-28) that
       wraps Claude Code, Codex, Gemini CLI, Grok Build, and Antigravity behind unified
@@ -122,4 +154,4 @@ competitors:
       ("chore: remove usage tracking and logging functionality",
       https://github.com/router-for-me/CLIProxyAPI/releases/tag/v6.10.0);
       feature-request issues #3444 and #3481 closed "Not planned" May 2026.
-      Low-Medium competitive threat.
+      Low-Medium reference relevance.

@@ -30,3 +30,5 @@ coverage/
 *.db
 .local/
 .runtime/
+.hands-on/*
+!.hands-on/.gitkeep
