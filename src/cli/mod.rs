@@ -22,7 +22,5 @@ fn run_cli() -> io::Result<()> {
         eprint!("{}", report.stderr);
     }
 
-    println!("ai-usage diagnostics: {}", report.diagnostics_dir.display());
-
     Ok(())
 }

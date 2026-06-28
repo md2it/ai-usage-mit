@@ -1,19 +1,12 @@
 use std::io;
 
-use crate::infra::diagnostics::Diagnostics;
 use crate::infra::process::run_provider;
 use crate::types::ProviderRun;
 
 const CODEX_COMMAND: &str = "codex";
 
-pub fn get_usage(diagnostics: &Diagnostics) -> io::Result<ProviderRun> {
-    run_provider(
-        diagnostics,
-        "codex",
-        None,
-        &expect_script(),
-        "bracketed-paste /status\r\nwait\nbracketed-paste /status\r\nctrl-c\n",
-    )
+pub fn get_usage() -> io::Result<ProviderRun> {
+    run_provider(&expect_script())
 }
 
 fn expect_script() -> String {

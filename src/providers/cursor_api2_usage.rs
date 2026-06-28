@@ -1,8 +1,6 @@
 use std::io::{self, Write};
 use std::process::{Command, Stdio};
 
-use crate::infra::diagnostics::Diagnostics;
-
 const SECURITY_COMMAND: &str = "security";
 const CURL_COMMAND: &str = "curl";
 const CURSOR_USAGE_URL: &str =
@@ -13,7 +11,7 @@ pub enum CursorApiUsageResult {
     Unavailable(String),
 }
 
-pub fn get_usage_summary(diagnostics: &Diagnostics) -> io::Result<CursorApiUsageResult> {
+pub fn get_usage_summary() -> io::Result<CursorApiUsageResult> {
     let token_output = Command::new(SECURITY_COMMAND)
         .args(["find-generic-password", "-s", "cursor-access-token", "-w"])
         .stdin(Stdio::null())
@@ -42,8 +40,6 @@ pub fn get_usage_summary(diagnostics: &Diagnostics) -> io::Result<CursorApiUsage
             "Cursor api2 usage unavailable: empty token; run `cursor agent login`".to_string(),
         ));
     }
-
-    diagnostics.write_cursor_api_request(CURSOR_USAGE_URL)?;
 
     let curl = Command::new(CURL_COMMAND)
         .args(["-sS", "-X", "POST", CURSOR_USAGE_URL, "-K", "-", "-d", "{}"])
@@ -83,8 +79,6 @@ pub fn get_usage_summary(diagnostics: &Diagnostics) -> io::Result<CursorApiUsage
     };
 
     let response = String::from_utf8_lossy(&usage_output.stdout).to_string();
-    let stderr = String::from_utf8_lossy(&usage_output.stderr).to_string();
-    diagnostics.write_cursor_api_response(&response, &stderr)?;
 
     if !usage_output.status.success() {
         return Ok(CursorApiUsageResult::Unavailable(format!(

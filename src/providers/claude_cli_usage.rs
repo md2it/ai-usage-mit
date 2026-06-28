@@ -1,19 +1,12 @@
 use std::io;
 
-use crate::infra::diagnostics::Diagnostics;
 use crate::infra::process::run_provider;
 use crate::types::ProviderRun;
 
 const CLAUDE_COMMAND: &str = "claude";
 
-pub fn get_usage(diagnostics: &Diagnostics) -> io::Result<ProviderRun> {
-    run_provider(
-        diagnostics,
-        "claude",
-        Some("claude"),
-        &expect_script(),
-        "accept default theme if first-run wizard appears\n/usage\r\nctrl-c twice\n",
-    )
+pub fn get_usage() -> io::Result<ProviderRun> {
+    run_provider(&expect_script())
 }
 
 fn expect_script() -> String {

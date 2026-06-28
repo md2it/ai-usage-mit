@@ -24,7 +24,6 @@ CLI и будущий desktop должны использовать общий c
 
 ```text
 src/
-  bin/
   cli/
   config/
   infra/
@@ -36,10 +35,9 @@ src/
 
 Назначение:
 
-- `bin/` — точки входа исполняемых программ
 - `cli/` — терминальный интерфейс, аргументы, вывод, exit codes
 - `config/` — пользовательские настройки, дефолты и пути к config-файлам
-- `infra/` — технические примитивы для процессов, HTTP, diagnostics, timeouts
+- `infra/` — технические примитивы для процессов, HTTP и timeouts
 - `providers/` — способы получения usage/limits от провайдеров
 - `get_limits.rs` — сценарий получения лимитов и интеграции provider method
 - `lib.rs` — общий core, доступный разным интерфейсам
@@ -72,11 +70,9 @@ src/
 ```text
 providers/
   mod.rs
-  registry.rs
   codex_cli_status.rs
   claude_cli_usage.rs
   cursor_api2_usage.rs
-  cursor_cli_agent_status.rs
 ```
 
 Правила:
@@ -177,7 +173,7 @@ Desktop почти наверняка будет реализован на Tauri
 - настройки — `config/`
 - получение данных — `providers/`
 - сценарий получения лимитов — `get_limits.rs`
-- запуск процессов, HTTP, diagnostics — `infra/`
+- запуск процессов, HTTP, timeouts — `infra/`
 - общие структуры данных — `types.rs`
 
 Если задача не укладывается в одну зону, нужно явно описать пересечение перед изменениями.
