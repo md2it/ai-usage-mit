@@ -2,7 +2,7 @@
 
 ## META
 
-- Date: 2026-06-28
+- Date researched: 2026-06-28 (updated 2026-06-28)
 - URL: https://github.com/router-for-me
 - Website: https://router-for.me
 - Help: https://help.router-for.me
@@ -11,7 +11,8 @@
 - License: MIT
 - Authors: Unknown
 - Owners: Router-For.ME (support@router-for.me)
-- GitHub: 38 600+ stars on CLIProxyAPI, 6 300+ forks (as of 2026-06-28)
+- GitHub: 38,618 stars on CLIProxyAPI, 6,378 forks (as of 2026-06-28)
+- Latest release: v7.2.44 (2026-06-28) — extremely active, multiple releases per day
 - Founded: Organisation created 2025-09-18
 
 ## OVERVIEW
@@ -37,14 +38,14 @@ The core use-case is **subscription reuse and multi-account pooling**: a develop
 ## FEATURES
 
 ### Core CLIProxyAPI
-- Wraps Claude Code, ChatGPT Codex, Gemini CLI, Grok Build, Antigravity behind a single API surface.
+- Wraps Claude Code, ChatGPT Codex, Gemini CLI, Grok Build, **Antigravity** (added ~mid-2026) behind a single API surface.
 - OpenAI / Gemini / Claude / Codex-compatible endpoints — drop-in for any client.
 - **Multi-account load balancing**: round-robin and fill-first strategies; distributes requests across multiple OAuth sessions to avoid rate limits.
 - OAuth-based credential management (no raw API keys needed — uses existing subscriptions).
 - Streaming and non-streaming response modes, WebSocket support.
 - Function calling / tool use, multimodal input (text + images).
 - **Hot-reload configuration** — file watcher with debouncing + hash verification, no service restart required.
-- Plugin architecture for extensibility.
+- **Plugin architecture** (v7.x, June 2026): plugin version management, hot reload, plugin logging, dedicated [CLIProxyAPI-Plugins-Store](https://github.com/router-for-me/CLIProxyAPI-Plugins-Store).
 - Multiple storage backends: file, PostgreSQL, Git, object storage.
 - Management API for runtime control.
 
@@ -88,7 +89,7 @@ Internal layers: Service Coordinator → HTTP API Server → Auth Managers → M
 | **Traffic model** | All AI traffic passes through the proxy | No traffic proxying; reads local session data / telemetry |
 | **Privacy** | User AI traffic routed through an extra layer (self-hosted or third-party) | Fully local, no traffic interception |
 | **Target user** | Developers who want to use CLI subscriptions in non-CLI tools (Cursor, Cline) | Developers who want to understand how much of their quota they have consumed |
-| **Limit visibility** | Explicitly removed: since v6.10.0 *"CLIProxyAPI and CPAMC no longer ship built-in usage statistics"* ([README](https://github.com/router-for-me/CLIProxyAPI/blob/main/README.md)); delegated to third-party tools (CPA Usage Keeper, CPA-Manager-Plus) | Core feature |
+| **Limit visibility** | Explicitly and permanently removed: v6.10.0 commit: *"chore: remove usage tracking and logging functionality"* ([release](https://github.com/router-for-me/CLIProxyAPI/releases/tag/v6.10.0), 2026-05-01). Feature requests (#3444, #3481) closed "Not planned" May 2026. Delegated to CPA Usage Keeper / CPA-Manager-Plus. | Core feature |
 | **Multi-account pooling** | Yes (round-robin across OAuth sessions) | Not applicable |
 | **License** | MIT (open-source) | — |
 
@@ -101,11 +102,13 @@ Internal layers: Service Coordinator → HTTP API Server → Auth Managers → M
 - Does the Management Center show actual subscription limit consumption, or only proxy throughput metrics?
 - Is there a fully local mode with no traffic passing through an external relay?
 - How does CLIProxyAPIBusiness differ from the open-source version?
-- What is the growth trajectory — are they expanding into analytics / observability?
+- What is "Antigravity" — a new AI provider or internal naming for an existing one?
 
 ## SOURCES
 
 - [GitHub: router-for-me](https://github.com/router-for-me)
 - [GitHub: CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)
+- [CLIProxyAPI releases](https://github.com/router-for-me/CLIProxyAPI/releases)
+- [v6.10.0 release notes — removal of usage tracking](https://github.com/router-for-me/CLIProxyAPI/releases/tag/v6.10.0)
 - [CLIProxyAPI Docs](https://help.router-for.me/introduction/what-is-cliproxyapi)
 - [DeepWiki: CLIProxyAPI architecture](https://deepwiki.com/router-for-me/CLIProxyAPI)

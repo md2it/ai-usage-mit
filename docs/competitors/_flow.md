@@ -22,7 +22,18 @@ Stop when you can answer: *What does it do, for whom, at what price, and what do
 
 Only if docs review leaves material uncertainty about a core feature.
 
-Run the product. Capture screenshots. Note what the UI exposes vs. what docs claim.
+1. Install the product in the local test environment.
+2. Run it as a real user would and verify the uncertain core feature directly.
+3. Record hands-on findings in the competitor document.
+   - Separate actual usage from docs, marketing pages, README files, and changelogs.
+   - Note what the UI exposes, what works, what is missing, and what differs from docs.
+4. Give the user a short summary.
+   - What was installed and tested.
+   - What was observed.
+   - What changed in the document.
+   - How to verify independently.
+   - What remains installed or created locally.
+5. Wait for the user to verify independently or ask to remove the tested tool and related artifacts.
 
 ## 4. Write `{id}.md`
 

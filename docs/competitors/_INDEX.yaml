@@ -27,9 +27,90 @@ competitors:
     url: https://github.com/router-for-me
     supported_interfaces: [cli, api]
     summary: >
-      Open-source proxy server (CLIProxyAPI, 38k GitHub stars) that wraps
-      Claude Code, Codex, Gemini CLI and Grok behind unified OpenAI-compatible
-      API endpoints with multi-account load balancing. Focused on access/routing,
-      not usage observability. Since v6.10.0: "CLIProxyAPI and CPAMC no longer
-      ship built-in usage statistics" (README: https://github.com/router-for-me/CLIProxyAPI/blob/main/README.md).
+      Open-source proxy server (CLIProxyAPI, 38,618 stars, v7.2.44 as of 2026-06-28) that
+      wraps Claude Code, Codex, Gemini CLI, Grok Build, and Antigravity behind unified
+      OpenAI-compatible API endpoints with multi-account load balancing. Focused on
+      access/routing, not observability. Usage tracking permanently removed in v6.10.0
+      ("chore: remove usage tracking and logging functionality",
+      https://github.com/router-for-me/CLIProxyAPI/releases/tag/v6.10.0);
+      feature-request issues #3444 and #3481 closed "Not planned" May 2026.
       Low-Medium competitive threat.
+
+  cpa-manager-plus:
+    name: CPA-Manager-Plus
+    status: docs_reviewed
+    document: cpa-manager-plus.md
+    url: https://github.com/seakee/CPA-Manager-Plus
+    supported_interfaces: [macos, windows, linux]
+    summary: >
+      Free MIT-licensed self-hosted ops dashboard (944 stars) tightly coupled to
+      CLIProxyAPI. Adds SQLite request ledger, cost/token analytics by model/key/project,
+      Codex quota inspection, and plugin ecosystem on top of CPA. Useless without CPA —
+      no standalone value. Primary audience: Chinese-speaking self-hosters. Low competitive
+      threat unless ai-usage-mit targets the same CPA analytics niche.
+
+  cpa-usage-keeper:
+    name: CPA Usage Keeper
+    status: docs_reviewed
+    document: cpa-usage-keeper.md
+    url: https://github.com/Willxup/cpa-usage-keeper
+    supported_interfaces: [api]
+    summary: >
+      Open-source observability sidecar (MIT, 818 stars) for CLIProxyAPI — not a standalone
+      product. Consumes CPA's Redis usage queue into SQLite and serves a built-in React
+      dashboard with cost tracking, latency diagnostics, credential health, and CSV/JSON
+      export. Requires CLIProxyAPI (`CPA_BASE_URL` mandatory); cannot run independently.
+      Very active: 55 releases, v1.12.1 on 2026-06-26. Medium competitive threat for the
+      CLIProxyAPI user segment specifically.
+
+  ccusage:
+    name: ccusage
+    status: docs_reviewed
+    document: ccusage.md
+    url: https://github.com/ryoppippi/ccusage
+    supported_interfaces: [cli]
+    summary: >
+      Open-source CLI tool (MIT, 14,100 stars) that reads local JSONL telemetry from
+      Claude Code, Codex, Gemini CLI, and 15+ other tools, generating daily/weekly/monthly
+      usage reports. Zero-install via `npx ccusage`. Does NOT track subscription quota,
+      reset countdowns, or burn-rate predictions. High competitive threat — same local-file
+      strategy and multi-tool scope as ai-usage-mit, but misses the quota/limit core.
+
+  claude-code-usage-monitor:
+    name: Claude-Code-Usage-Monitor
+    status: docs_reviewed
+    document: claude-code-usage-monitor.md
+    url: https://github.com/Maciek-roboblog/Claude-Code-Usage-Monitor
+    supported_interfaces: [cli]
+    summary: >
+      Open-source real-time terminal monitor (8,300 stars) for Claude Code usage with
+      Rich UI, burn-rate tracking, and session limit predictions ("will I hit my limit?").
+      Claude Code only — no Codex, Gemini CLI, or other tools. High competitive threat
+      for the Claude Code segment specifically; ai-usage-mit differentiates via
+      multi-tool support and polished UI.
+
+  claude-usage:
+    name: claude-usage (phuryn)
+    status: docs_reviewed
+    document: claude-usage.md
+    url: https://github.com/phuryn/claude-usage
+    supported_interfaces: [api, macos, windows, linux]
+    summary: >
+      Open-source local web dashboard (~1,600 stars) for Claude Code usage history.
+      Localhost:8080 SPA with Chart.js charts, 30s auto-refresh, usage progress bar
+      for Pro/Max, and VS Code extension. Claude Code only; no burn-rate prediction.
+      Medium competitive threat — same audience, local-first approach, and web UI are
+      strengths, but limited to Claude Code and less actively maintained.
+
+  llmeter:
+    name: LLMeter
+    status: docs_reviewed
+    document: llmeter.md
+    url: https://llmeter.app
+    supported_interfaces: [api]
+    summary: >
+      Open-source multi-provider AI billing dashboard that reads from provider billing
+      APIs (OpenAI, Anthropic, Google AI, DeepSeek, OpenRouter, Mistral) using read-only
+      API keys. No local-file or CLI subscription awareness — cannot track Claude Code /
+      Codex quota consumption. Low-Medium threat: different data source and audience
+      (API cost watchers, not CLI subscription users); risk is positioning overlap only.
