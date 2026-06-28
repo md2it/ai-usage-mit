@@ -128,17 +128,17 @@ references:
     compare:
       supported_interfaces: [api]
       providers: [CLIProxyAPI]
-      capabilities: []
+      capabilities: [usage, limits, session_limits, reset, cost, usage_history]
       notifications: null
       hard_stop: null
       conclusion: 👀
     summary: >
       Open-source observability sidecar (MIT, 818 stars) for CLIProxyAPI — not a standalone
       product. Consumes CPA's Redis usage queue into SQLite and serves a built-in React
-      dashboard with cost tracking, latency diagnostics, credential health, and CSV/JSON
-      export. Requires CLIProxyAPI (`CPA_BASE_URL` mandatory); cannot run independently.
-      Very active: 55 releases, v1.12.1 on 2026-06-26. Medium reference relevance for the
-      CLIProxyAPI user segment specifically.
+      dashboard with historical CPA event analytics, pricing/latency diagnostics, credential
+      health, and CSV/JSON export. Live CPA/Redis is still required for ingestion, metadata,
+      credential quota windows, and reset timing; provider scope is CLIProxyAPI events, not
+      direct provider integrations. Very active: 55 releases, v1.12.1 on 2026-06-26.
 
   llmeter:
     meta:
@@ -147,18 +147,20 @@ references:
       document: llmeter.md
       link: https://llmeter.app
     compare:
-      supported_interfaces: [api]
-      providers: [OpenAI, Anthropic, Google AI, DeepSeek, OpenRouter, Mistral]
-      capabilities: []
-      notifications: null
+      supported_interfaces: [api, web]
+      providers: [OpenAI, Anthropic, DeepSeek, OpenRouter, Mistral, Google AI, Azure OpenAI, AWS Bedrock]
+      capabilities: [usage, cost, usage_history]
+      notifications: true
       hard_stop: false
       conclusion: 👀
     summary: >
-      Open-source multi-provider AI billing dashboard that reads from provider billing
-      APIs (OpenAI, Anthropic, Google AI, DeepSeek, OpenRouter, Mistral) using read-only
-      API keys. No local-file or CLI subscription awareness — cannot track Claude Code /
-      Codex quota consumption. Low-Medium relevance: different data source and audience
-      (API cost watchers, not CLI subscription users); risk is positioning overlap only.
+      Open-source multi-provider AI billing dashboard for real API spend, usage trends,
+      retention, exports, budget/anomaly alerts, and email/Slack/webhook notifications.
+      Billing API integrations cover OpenAI, Anthropic, DeepSeek, OpenRouter, and Mistral;
+      Google AI, Azure OpenAI, and AWS Bedrock are documented through SDK wrappers, with
+      Google AI marked "coming soon" on the homepage FAQ. No local-file or CLI subscription
+      awareness: no Claude Code / Codex / Gemini CLI limits, credits, or reset countdown.
+      Low-Medium relevance: different data source and audience; positioning overlap only.
 
   router-for-me:
     meta:
@@ -170,8 +172,8 @@ references:
       supported_interfaces: [cli, api]
       providers: [Claude, Codex, Gemini, Grok, Antigravity]
       capabilities: []
-      notifications: false
-      hard_stop: false
+      notifications: null
+      hard_stop: null
       conclusion: 👀
     summary: >
       Open-source proxy server (CLIProxyAPI, 38,618 stars, v7.2.44 as of 2026-06-28) that
