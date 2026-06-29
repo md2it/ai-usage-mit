@@ -30,6 +30,7 @@ struct RateLimits {
     primary: Option<RateLimitWindow>,
     secondary: Option<RateLimitWindow>,
     credits: Option<f64>,
+    credits_unlimited: bool,
     plan_type: Option<String>,
 }
 
@@ -192,15 +193,42 @@ fn parse_rate_limits(record: &Value) -> Option<RateLimits> {
         .get("rate_limits")
         .or_else(|| record.pointer("/payload/rate_limits"))?;
 
+    let (credits, credits_unlimited) = parse_credits(value.get("credits"));
+
     Some(RateLimits {
         primary: parse_rate_limit_window(value.get("primary")),
         secondary: parse_rate_limit_window(value.get("secondary")),
-        credits: value.get("credits").and_then(number_f64_any),
+        credits,
+        credits_unlimited,
         plan_type: value
             .get("plan_type")
             .and_then(Value::as_str)
             .map(ToString::to_string),
     })
+}
+
+fn parse_credits(value: Option<&Value>) -> (Option<f64>, bool) {
+    let Some(value) = value else {
+        return (None, false);
+    };
+
+    if let Some(number) = number_f64_any(value) {
+        return (Some(number), false);
+    }
+
+    let Some(object) = value.as_object() else {
+        return (None, false);
+    };
+
+    if object.get("has_credits").and_then(Value::as_bool) == Some(false) {
+        return (None, false);
+    }
+
+    if object.get("unlimited").and_then(Value::as_bool) == Some(true) {
+        return (None, true);
+    }
+
+    (object.get("balance").and_then(number_f64_any), false)
 }
 
 fn parse_rate_limit_window(value: Option<&Value>) -> Option<RateLimitWindow> {
@@ -271,7 +299,9 @@ fn format_summary(root: &Path, usage: &CodexLocalUsage) -> String {
             &rate_limits.secondary,
         ));
 
-        if let Some(credits) = rate_limits.credits {
+        if rate_limits.credits_unlimited {
+            summary.push_str("credits: unlimited\n");
+        } else if let Some(credits) = rate_limits.credits {
             summary.push_str(&format!("credits: {}\n", format_decimal(credits)));
         }
         if let Some(plan_type) = &rate_limits.plan_type {
@@ -436,7 +466,7 @@ mod tests {
         fs::write(
             &path,
             r#"{"type":"event_msg","timestamp":"2026-06-29T01:46:39.473Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":10,"cached_input_tokens":0,"output_tokens":5,"reasoning_output_tokens":0,"total_tokens":15}},"rate_limits":{"primary":{"used_percent":86.0,"window_minutes":300,"resets_at":1782709162},"plan_type":"plus"}}}
-{"type":"event_msg","timestamp":"2026-06-29T02:24:02.237Z","payload":{"type":"token_count","info":null,"rate_limits":{"primary":{"used_percent":100.0,"window_minutes":300,"resets_at":1782709162},"secondary":{"used_percent":16.0,"window_minutes":10080,"resets_at":1783295962},"plan_type":"plus"}}}
+{"type":"event_msg","timestamp":"2026-06-29T02:24:02.237Z","payload":{"type":"token_count","info":null,"rate_limits":{"primary":{"used_percent":100.0,"window_minutes":300,"resets_at":1782709162},"secondary":{"used_percent":16.0,"window_minutes":10080,"resets_at":1783295962},"credits":{"has_credits":true,"unlimited":false,"balance":"336.2474587500"},"plan_type":"plus"}}}
 "#,
         )
         .expect("write fixture");
@@ -457,6 +487,26 @@ mod tests {
         assert!(summary.contains(
             "secondary: used 16%, window weekly (10080m), resets 2026-07-05T23:59:22Z"
         ));
+        assert!(summary.contains("credits: 336.2"));
+    }
+
+    #[test]
+    fn parses_unlimited_credits_object() {
+        assert_eq!(
+            parse_credits(Some(&serde_json::json!({
+                "has_credits": true,
+                "unlimited": true
+            }))),
+            (None, true)
+        );
+        assert_eq!(
+            parse_credits(Some(&serde_json::json!({
+                "has_credits": true,
+                "unlimited": false,
+                "balance": "336.2474587500"
+            }))),
+            (Some(336.2474587500), false)
+        );
     }
 
     #[test]

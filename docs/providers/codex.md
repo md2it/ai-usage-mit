@@ -45,7 +45,7 @@ What is extracted:
 - events with `"type":"token_count"` and `"last_token_usage"`
 - totals: input, cached input, output, reasoning output, total
 - latest activity timestamp (ISO 8601 UTC from the latest `token_count` event with `rate_limits`)
-- `rate_limits` snapshot when present: `primary.used_percent`, `primary.window_minutes`, `primary.resets_at`, `secondary.used_percent`, `secondary.window_minutes`, `secondary.resets_at`, `credits`, `plan_type`
+- `rate_limits` snapshot when present: `primary.used_percent`, `primary.window_minutes`, `primary.resets_at`, `secondary.used_percent`, `secondary.window_minutes`, `secondary.resets_at`, `credits` (`balance` or scalar), `plan_type`
 
 How to get these fields from local files:
 
