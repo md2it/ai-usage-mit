@@ -62,20 +62,9 @@ pub struct ProviderRun {
     pub stderr: String,
 }
 
-pub struct CursorRun {
-    pub summary: String,
-    pub stderr: String,
-}
-
-pub struct GetLimitsReport {
-    pub summaries: Vec<String>,
-    pub stderr: String,
-}
-
 pub struct SourceReport {
     pub source: Source,
-    pub summary: String,
-    pub stderr: String,
+    pub data: SourceData,
 }
 
 #[derive(Clone, Debug, PartialEq, serde::Serialize)]

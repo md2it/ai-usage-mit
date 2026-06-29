@@ -57,16 +57,17 @@ impl TerminalUi {
         Ok(())
     }
 
-    pub fn print_source_heading(&mut self, heading: &str) -> io::Result<()> {
-        println!("            ~~~~~~~~~~ {heading} ~~~~~~~~~~");
+    pub fn print_provider_heading(&mut self, heading: &str) -> io::Result<()> {
+        println!();
+        println!("            ---------- {heading} ----------");
         println!();
         Ok(())
     }
 
-    pub fn print_source_result(&mut self, heading: &str, summary: &str) -> io::Result<()> {
+    pub fn print_provider_block(&mut self, heading: &str, body: &str) -> io::Result<()> {
         self.clear_loaders()?;
-        self.print_source_heading(heading)?;
-        print!("{}", summary.trim_end());
+        self.print_provider_heading(heading)?;
+        print!("{}", body.trim_end());
         println!();
         println!();
         io::stdout().flush()

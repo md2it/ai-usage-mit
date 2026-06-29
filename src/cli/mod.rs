@@ -8,8 +8,11 @@ use std::time::Instant;
 use crate::infra::loader::{
     loader_show_delay, loader_tick, LoaderView, TerminalStatus, TerminalUi,
 };
-use crate::types::Source;
-use crate::types::SourceReport;
+use crate::presentation::{
+    format_raw_output, format_structured_output, limits_block, usage_block, ColorConfig,
+    ProviderBlock,
+};
+use crate::types::{Source, SourceReport};
 
 pub fn run() -> ExitCode {
     match run_cli() {
@@ -54,12 +57,7 @@ fn run_cli() -> io::Result<TerminalStatus> {
     let sources = select_sources(args)?;
     let mut ui = TerminalUi::new();
     ui.print_top()?;
-    // TODO: route OutputMode::Raw and OutputMode::Structured to real source-level outputs.
-    // For now both modes use the existing provider summary path while the provider contract is implemented.
-    match output_mode {
-        OutputMode::Raw | OutputMode::Structured => {}
-    }
-    let status = run_sources_with_terminal_ui(&mut ui, &sources)?;
+    let status = run_sources_with_terminal_ui(&mut ui, &sources, output_mode)?;
     ui.print_bottom(status)?;
 
     Ok(status)
@@ -137,11 +135,13 @@ fn read_overwrite_confirmation(
 fn run_sources_with_terminal_ui(
     ui: &mut TerminalUi,
     sources: &[Source],
+    output_mode: OutputMode,
 ) -> io::Result<TerminalStatus> {
     if sources.is_empty() {
         return Ok(TerminalStatus::Fail);
     }
 
+    let color = ColorConfig::from_env(io::stdout().is_terminal());
     let (sender, receiver) = mpsc::channel::<SourceEvent>();
     let mut running = Vec::new();
 
@@ -180,15 +180,13 @@ fn run_sources_with_terminal_ui(
                 match event.result {
                     Ok(report) => {
                         successes += 1;
-                        stderr.push_str(&report.stderr);
-                        ui.print_source_result(report.source.heading(), &report.summary)?;
+                        stderr.push_str(&report.data.stderr);
+                        print_source_report(ui, &report, output_mode, &color)?;
                     }
                     Err(error) => {
                         failures += 1;
-                        ui.print_source_result(
-                            event.source.heading(),
-                            &format!("{} usage:\nfailed: {error}\n", event.source.label()),
-                        )?;
+                        let block = failed_source_block(event.source, &error.to_string());
+                        ui.print_provider_block(&block.provider_label, &block.body)?;
                     }
                 }
             }
@@ -208,6 +206,41 @@ fn run_sources_with_terminal_ui(
         (0, _) => TerminalStatus::Fail,
         _ => TerminalStatus::Part,
     })
+}
+
+fn print_source_report(
+    ui: &mut TerminalUi,
+    report: &SourceReport,
+    output_mode: OutputMode,
+    color: &ColorConfig,
+) -> io::Result<()> {
+    let block = match output_mode {
+        OutputMode::Limits => limits_block(&report.data.structured, color),
+        OutputMode::Usage => usage_block(&report.data.structured),
+        OutputMode::Raw => ProviderBlock {
+            provider_label: report.data.structured.provider.to_ascii_uppercase(),
+            body: format_raw_output(&report.data),
+        },
+        OutputMode::Structured => ProviderBlock {
+            provider_label: report.data.structured.provider.to_ascii_uppercase(),
+            body: format_structured_output(&report.data),
+        },
+    };
+
+    ui.print_provider_block(&block.provider_label, &block.body)
+}
+
+fn failed_source_block(source: Source, error: &str) -> ProviderBlock {
+    let provider = match source {
+        Source::CodexLocal | Source::CodexCli => "CODEX",
+        Source::ClaudeHook | Source::ClaudeCli | Source::ClaudeLocal => "CLAUDE",
+        Source::CursorApi2 => "CURSOR",
+    };
+
+    ProviderBlock {
+        provider_label: provider.to_string(),
+        body: format!("Unavailable: {error}\nData as of: unknown"),
+    }
 }
 
 fn render_running_loaders(ui: &mut TerminalUi, running: &mut [RunningSource]) -> io::Result<()> {
@@ -246,6 +279,8 @@ struct CliArgs {
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum OutputMode {
+    Limits,
+    Usage,
     Raw,
     Structured,
 }
@@ -255,7 +290,7 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
         help: false,
         init_config: false,
         all: false,
-        output_mode: OutputMode::Structured,
+        output_mode: OutputMode::Limits,
         sources: Vec::new(),
     };
     let mut args = args.peekable();
@@ -272,11 +307,20 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
             "-a" | "--all" => {
                 parsed.all = true;
             }
+            "--usage" => {
+                if output_mode.is_some() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "--usage cannot be combined with --raw or --structured",
+                    ));
+                }
+                output_mode = Some(OutputMode::Usage);
+            }
             "-r" | "--raw" => {
                 if output_mode.is_some() {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
-                        "--raw cannot be combined with --structured",
+                        "--raw cannot be combined with other output flags",
                     ));
                 }
                 output_mode = Some(OutputMode::Raw);
@@ -285,7 +329,7 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
                 if output_mode.is_some() {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidInput,
-                        "--structured cannot be combined with --raw",
+                        "--structured cannot be combined with other output flags",
                     ));
                 }
                 output_mode = Some(OutputMode::Structured);
@@ -334,6 +378,7 @@ Options:
   --help, -h       Show this help
   --init-config    Create / overwrite the user config file
   --all, -a        Query all current sources, ignoring config defaults
+  --usage          Show user-facing usage summary
   --raw, -r        Return raw source data
   --structured, -s Return structured source data
 
@@ -345,17 +390,11 @@ Technical source options:
   --claude-local   Query Claude from local transcript JSONL files
   --cursor-api2    Query Cursor through api2.cursor.sh
 
-Output:
-  default          Structured source data
-  --raw, -r        Data as received or extracted from each source
-  --structured, -s Data converted to the common structured format
-
 Examples:
   ai-limits --all
-  ai-limits --all -r
+  ai-limits --all --usage
+  ai-limits --all --raw
   ai-limits --all --structured
-  ai-limits --codex-cli --raw
-  ai-limits --cursor-api2 -s
 
 Config:
   ~/.config/ai-limits/config.toml
@@ -437,14 +476,15 @@ mod tests {
     }
 
     #[test]
-    fn structured_output_is_default() {
+    fn limits_output_is_default() {
         let args = parse(&[]);
 
-        assert_eq!(args.output_mode, OutputMode::Structured);
+        assert_eq!(args.output_mode, OutputMode::Limits);
     }
 
     #[test]
-    fn supports_raw_and_structured_output_flags() {
+    fn supports_usage_raw_and_structured_output_flags() {
+        assert_eq!(parse(&["--usage"]).output_mode, OutputMode::Usage);
         assert_eq!(parse(&["--raw"]).output_mode, OutputMode::Raw);
         assert_eq!(parse(&["-r"]).output_mode, OutputMode::Raw);
         assert_eq!(parse(&["--structured"]).output_mode, OutputMode::Structured);
@@ -452,8 +492,9 @@ mod tests {
     }
 
     #[test]
-    fn rejects_combined_raw_and_structured_output_flags() {
+    fn rejects_combined_output_flags() {
         assert!(parse_args(["--raw", "--structured"].into_iter().map(String::from)).is_err());
+        assert!(parse_args(["--usage", "--raw"].into_iter().map(String::from)).is_err());
         assert!(parse_args(["-s", "-r"].into_iter().map(String::from)).is_err());
     }
 
