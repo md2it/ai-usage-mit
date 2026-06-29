@@ -41,7 +41,7 @@ struct RateLimitWindow {
 
 struct TokenEvent {
     timestamp: Option<String>,
-    usage: TokenTotals,
+    usage: Option<TokenTotals>,
     rate_limits: Option<RateLimits>,
 }
 
@@ -110,11 +110,14 @@ fn scan_file(path: &Path, usage: &mut CodexLocalUsage) -> io::Result<()> {
         };
 
         usage.token_events += 1;
-        usage.totals.input_tokens += event.usage.input_tokens;
-        usage.totals.cached_input_tokens += event.usage.cached_input_tokens;
-        usage.totals.output_tokens += event.usage.output_tokens;
-        usage.totals.reasoning_output_tokens += event.usage.reasoning_output_tokens;
-        usage.totals.total_tokens += event.usage.total_tokens;
+
+        if let Some(tokens) = &event.usage {
+            usage.totals.input_tokens += tokens.input_tokens;
+            usage.totals.cached_input_tokens += tokens.cached_input_tokens;
+            usage.totals.output_tokens += tokens.output_tokens;
+            usage.totals.reasoning_output_tokens += tokens.reasoning_output_tokens;
+            usage.totals.total_tokens += tokens.total_tokens;
+        }
 
         if let Some(timestamp) = event.timestamp {
             if usage
@@ -145,16 +148,12 @@ fn parse_token_event(line: &str) -> Option<TokenEvent> {
         return None;
     }
 
-    let usage_value = record
-        .get("last_token_usage")
-        .or_else(|| record.pointer("/payload/info/last_token_usage"))?;
-    let usage = TokenTotals {
-        input_tokens: number_u64(usage_value, "input_tokens")?,
-        cached_input_tokens: number_u64(usage_value, "cached_input_tokens").unwrap_or(0),
-        output_tokens: number_u64(usage_value, "output_tokens")?,
-        reasoning_output_tokens: number_u64(usage_value, "reasoning_output_tokens").unwrap_or(0),
-        total_tokens: number_u64(usage_value, "total_tokens")?,
-    };
+    let usage = parse_token_usage(&record);
+    let rate_limits = parse_rate_limits(&record);
+
+    if usage.is_none() && rate_limits.is_none() {
+        return None;
+    }
 
     Some(TokenEvent {
         timestamp: record
@@ -162,7 +161,21 @@ fn parse_token_event(line: &str) -> Option<TokenEvent> {
             .and_then(Value::as_str)
             .map(ToString::to_string),
         usage,
-        rate_limits: parse_rate_limits(&record),
+        rate_limits,
+    })
+}
+
+fn parse_token_usage(record: &Value) -> Option<TokenTotals> {
+    let usage_value = record
+        .get("last_token_usage")
+        .or_else(|| record.pointer("/payload/info/last_token_usage"))?;
+
+    Some(TokenTotals {
+        input_tokens: number_u64(usage_value, "input_tokens")?,
+        cached_input_tokens: number_u64(usage_value, "cached_input_tokens").unwrap_or(0),
+        output_tokens: number_u64(usage_value, "output_tokens")?,
+        reasoning_output_tokens: number_u64(usage_value, "reasoning_output_tokens").unwrap_or(0),
+        total_tokens: number_u64(usage_value, "total_tokens")?,
     })
 }
 
@@ -397,6 +410,37 @@ mod tests {
         );
         assert!(summary.contains("token events: 2"));
         assert!(summary.contains("limits/reset: unavailable in local Codex JSONL"));
+    }
+
+    #[test]
+    fn accepts_rate_limits_only_token_count_with_null_info() {
+        let path = env::temp_dir().join(format!(
+            "ai-usage-codex-local-{}-3.jsonl",
+            std::process::id()
+        ));
+        fs::write(
+            &path,
+            r#"{"type":"event_msg","timestamp":"2026-06-29T01:46:39.473Z","payload":{"type":"token_count","info":{"last_token_usage":{"input_tokens":10,"cached_input_tokens":0,"output_tokens":5,"reasoning_output_tokens":0,"total_tokens":15}},"rate_limits":{"primary":{"used_percent":86.0,"window_minutes":300,"resets_at":1782709162},"plan_type":"plus"}}}
+{"type":"event_msg","timestamp":"2026-06-29T02:24:02.237Z","payload":{"type":"token_count","info":null,"rate_limits":{"primary":{"used_percent":100.0,"window_minutes":300,"resets_at":1782709162},"secondary":{"used_percent":16.0,"window_minutes":10080,"resets_at":1783295962},"plan_type":"plus"}}}
+"#,
+        )
+        .expect("write fixture");
+
+        let mut usage = CodexLocalUsage::default();
+        scan_file(&path, &mut usage).expect("scan fixture");
+        let summary = format_summary(Path::new("/tmp/.codex"), &usage);
+        let _ = fs::remove_file(&path);
+
+        assert_eq!(usage.token_events, 2);
+        assert_eq!(usage.totals.total_tokens, 15);
+        assert_eq!(
+            usage.latest_timestamp.as_deref(),
+            Some("2026-06-29T02:24:02.237Z")
+        );
+        assert!(summary.contains("primary: used 100%, window 5h (300m), resets at 1782709162 (unix)"));
+        assert!(summary.contains(
+            "secondary: used 16%, window weekly (10080m), resets at 1783295962 (unix)"
+        ));
     }
 
     #[test]
