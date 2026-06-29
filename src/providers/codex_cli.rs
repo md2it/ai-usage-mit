@@ -56,9 +56,9 @@ pub fn extract_usage_summary(input: &str) -> Option<String> {
         let normalized = line.split_whitespace().collect::<Vec<_>>().join(" ");
 
         if normalized.starts_with("5h limit:") {
-            five_hour_limit = Some(normalized);
+            five_hour_limit = Some(strip_progress_bar(&normalized));
         } else if normalized.starts_with("Weekly limit:") {
-            weekly_limit = Some(normalized);
+            weekly_limit = Some(strip_progress_bar(&normalized));
         } else if normalized.starts_with("Credits:") {
             credits = Some(normalized);
         }
@@ -84,4 +84,68 @@ pub fn extract_usage_summary(input: &str) -> Option<String> {
     }
 
     Some(summary)
+}
+
+fn strip_progress_bar(line: &str) -> String {
+    let Some(bracket_start) = line.find('[') else {
+        return line.to_string();
+    };
+    let Some(bracket_end) = line[bracket_start..].find(']') else {
+        return line.to_string();
+    };
+
+    let prefix = line[..bracket_start].trim_end();
+    let rest = line[bracket_start + bracket_end + 1..].trim_start();
+
+    if rest.is_empty() {
+        prefix.to_string()
+    } else {
+        format!("{prefix} {rest}")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn strips_progress_bar_from_limit_lines() {
+        assert_eq!(
+            strip_progress_bar("5h limit: [░░░░░░░░░░░░░░░░░░░░] 0% left (resets 07:59)"),
+            "5h limit: 0% left (resets 07:59)"
+        );
+        assert_eq!(
+            strip_progress_bar(
+                "Weekly limit: [█████████████████░░░] 84% left (resets 02:59 on 6 Jul)"
+            ),
+            "Weekly limit: 84% left (resets 02:59 on 6 Jul)"
+        );
+    }
+
+    #[test]
+    fn leaves_lines_without_progress_bar_unchanged() {
+        assert_eq!(
+            strip_progress_bar("5h limit: 0% left (resets 07:59)"),
+            "5h limit: 0% left (resets 07:59)"
+        );
+        assert_eq!(
+            strip_progress_bar("Credits: 335 credits"),
+            "Credits: 335 credits"
+        );
+    }
+
+    #[test]
+    fn extract_usage_summary_strips_visual_bars() {
+        let input = "\
+5h limit: [░░░░░░░░░░░░░░░░░░░░] 0% left (resets 07:59)
+Weekly limit: [█████████████████░░░] 84% left (resets 02:59 on 6 Jul)
+Credits: 335 credits
+";
+        let summary = extract_usage_summary(input).expect("summary");
+
+        assert!(summary.contains("5h limit: 0% left (resets 07:59)\n"));
+        assert!(summary.contains("Weekly limit: 84% left (resets 02:59 on 6 Jul)\n"));
+        assert!(summary.contains("Credits: 335 credits\n"));
+        assert!(!summary.contains('['));
+    }
 }
