@@ -28,7 +28,7 @@ The same source scripts should provide two output modes:
 
    Structured data must be stable and machine-readable. It must follow the same field contract for every provider and source.
 
-User-facing presentation is a separate layer. Source scripts should not define the final terminal summary format.
+User-facing presentation is a separate layer. Source scripts should not define the final terminal summary format, limit bars, colors, provider headers, or fallback display text.
 
 ## Structured format
 
@@ -46,6 +46,7 @@ status:
   message: string | null
 raw_data_available: boolean
 collected_at: string | null
+data_as_of: string | null
 account:
   plan: string | null
   credits_total: number | null
@@ -101,6 +102,16 @@ If a source provides used, remaining, and total amounts, all available values sh
 If only two amount values are available and the third can be calculated reliably, the system should calculate it.
 
 `amount_unit` should describe what is being limited, for example `tokens`, `credits`, `usd`, `requests`, or another provider-specific unit.
+
+## Time fields
+
+`collected_at` is the time when `ai-usage` collected or read the source data.
+
+`data_as_of` is the time when the source data itself was last current. For local files, transcripts, or hook payloads, this is usually the timestamp of the latest relevant source record or session. For live API or CLI responses, this may be the response or snapshot time.
+
+The default terminal presentation uses `data_as_of` for the `Data as of` line. It does not use `collected_at` for this line.
+
+`usage.activity.latest_activity_at` is a separate business fact about user activity. It must not be treated as the default `Data as of` value unless it is also the best known timestamp for the source data itself.
 
 ## Empty and unavailable values
 

@@ -33,7 +33,7 @@ Technical source options:
   --cursor-api2    Query Cursor through api2.cursor.sh
 
 Output:
-  default          Structured source data
+  default          User-facing provider summary
   --raw, -r        Data as received or extracted from each source
   --structured, -s Data converted to the common structured format
 
@@ -54,9 +54,9 @@ Config:
 
 ```
 
-`--raw` and `--structured` are technical output modes for source-level data. They support development, testing, and the future presentation layer. The final user-facing output may become a separate mode later.
+Default output is the user-facing terminal presentation. `--raw` and `--structured` are technical output modes for source-level data. They support development, testing, and provider contract checks.
 
-Technical source options are working source selectors, but they are primarily intended for intermediate source-level workflows. The recommended user-facing workflow may be provided by the future presentation layer.
+Technical source options are working source selectors, but they are primarily intended for intermediate source-level workflows.
 
 ---
 
@@ -110,28 +110,71 @@ ai-usage: unknown argument `--bad`
 
 ---
 
-### Source Block
+### Provider Block
 
-Each completed source is printed as a separate block.
+Default output prints each provider as a separate block.
 
 Block header:
 
 ```text
-            ~~~~~~~~~~ CURSOR-API2 ~~~~~~~~~~
-            ~~~~~~~~~~ CODEX-CLI ~~~~~~~~~~
-            ~~~~~~~~~~ CLAUDE-CLI ~~~~~~~~~~
+            ---------- CODEX ----------
+            ---------- CLAUDE ----------
+            ---------- CURSOR ----------
 ```
 
-An empty line is printed after the header, then the source result.
+An empty line is printed before each provider header and after the header.
+
+Each provider block contains:
+
+- zero or more limit rows;
+- credits or balance, when available;
+- `Data as of`, using structured `data_as_of`.
+
+Limit row format:
 
 Format:
 
 ```text
-            ~~~~~~~~~~ CURSOR-API2 ~~~~~~~~~~
+{window:<4} {bar:<25} {left:>8} | reset {reset_at}
+```
 
-Cursor usage:
-Cursor api2 usage unavailable: token not found; run `cursor agent login`
+Example:
 
+```text
+            ---------- CODEX ----------
+
+5h   ■■□□□□□□□□□□□□□□□□□□□□□□□   8% left | reset Jun 30, 21:41 UTC-2
+7d   ■■■■■■■■■■■■■◧□□□□□□□□□□□  54% left | reset Jul 3, 21:41 UTC-2
+344.2 credits available
+Data as of: Jul 3, 21:41 UTC-2
+```
+
+The bar width is `25` characters. One full bar character represents `4%`. A half or partial bar character may represent `2%`.
+
+The filled bar characters show available remaining limit, not used limit. The whole filled part uses one color based on remaining limit. The empty bar characters are not colored.
+
+If `data_as_of` is unavailable, print:
+
+```text
+Data as of: unknown
+```
+
+If the source is unavailable, print the provider block with the status message:
+
+```text
+            ---------- CLAUDE ----------
+
+Unavailable: not logged in
+Data as of: unknown
+```
+
+If the source is available but has no supported limit data, print the provider block with a short reason:
+
+```text
+            ---------- CODEX ----------
+
+No limit data from this source
+Data as of: Jul 3, 21:41 UTC-2
 ```
 
 ---
@@ -171,9 +214,21 @@ After a source finishes, the loader is cleared, then the source result block is 
 
 ### Color
 
-Terminal UI does not use color.
+Default output may use color for filled bar characters only.
 
-Output does not contain ANSI color codes for frames, headers, the loader, or content.
+Frames, headers, loader text, labels, percentages, reset text, and empty bar characters are not colored.
+
+Color is based on remaining limit:
+
+| Remaining limit | Color |
+| --- | --- |
+| `>= 75%` | green |
+| `>= 50%` | yellow |
+| `>= 25%` | yellow or orange, depending on terminal support |
+| `>= 10%` | red |
+| `< 10%` | bright red |
+
+Color is optional. If stdout is not a TTY, the terminal does not support color, or color is disabled by environment settings such as `NO_COLOR`, output must remain readable without ANSI color codes.
 
 ---
 
@@ -232,7 +287,12 @@ src/cli/mod.rs
   - starts provider worker threads
   - receives events via channel
   - passes state to terminal renderer
-  - prints source results
+  - prints provider presentation results
+
+src/presentation/*
+  - converts structured data into user-facing provider blocks
+  - selects display labels, limit rows, bar values, and fallback messages
+  - does not fetch source data
 
 src/infra/loader.rs
   - selects unicode/ascii spinner
@@ -246,5 +306,6 @@ src/get_limits.rs
 
 src/providers/*
   - fetches source data
+  - returns raw and structured data
   - does not render terminal UI
 ```
