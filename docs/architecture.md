@@ -89,7 +89,7 @@ If a single provider grows to many files, you can move to a nested structure by 
 
 ## `get_limits` Scenario
 
-`get_limits.rs` follows the document [get-limits.md](get-limits.md).
+`get_limits.rs` follows the document [get-info/methods/README.md](get-info/methods/README.md).
 
 Purpose:
 
@@ -112,7 +112,7 @@ Boundaries:
 Provider documentation is grouped by provider:
 
 ```text
-docs/providers/
+docs/get-info/providers/
   codex.md
   claude.md
   cursor.md

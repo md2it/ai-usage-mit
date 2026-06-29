@@ -31,9 +31,9 @@ The product goal is to show the user current limits locally with minimal setup. 
 
 | Provider | Primary known option | Status | Documents |
 |---|---|---|---|
-| Codex | CLI `/status` | Implemented in PoC | [providers/codex.md](providers/codex.md) |
-| Claude | CLI `/usage` + statusline hook stdin (`rate_limits`) | CLI implemented in PoC; statusline hook is a live-limit candidate | [providers/claude.md](providers/claude.md) |
-| Cursor | `api2.cursor.sh` `GetCurrentPeriodUsage` via Cursor Agent token | Implemented in PoC; `cursor agent about/status` remains fallback | [providers/cursor.md](providers/cursor.md), [references/cursor-api2-cursor-sh.md](references/cursor-api2-cursor-sh.md) |
+| Codex | CLI `/status` | Implemented in PoC | [../providers/codex.md](../providers/codex.md) |
+| Claude | CLI `/usage` + statusline hook stdin (`rate_limits`) | CLI implemented in PoC; statusline hook is a live-limit candidate | [../providers/claude.md](../providers/claude.md) |
+| Cursor | `api2.cursor.sh` `GetCurrentPeriodUsage` via Cursor Agent token | Implemented in PoC; `cursor agent about/status` remains fallback | [../providers/cursor.md](../providers/cursor.md), [../../references/cursor-api2-cursor-sh.md](../../references/cursor-api2-cursor-sh.md) |
 
 ## Method selection principles
 
@@ -46,9 +46,9 @@ The product goal is to show the user current limits locally with minimal setup. 
 
 ## Related documents
 
-- [get-limits-from-provider-cli.md](get-limits-from-provider-cli.md) — technical model for provider methods that retrieve data via the provider CLI/TUI.
-- [get-limits-from-local-files.md](get-limits-from-local-files.md) — technical model for provider methods that retrieve data from local transcript/telemetry files.
-- [get-limits-from-statusline-hook.md](get-limits-from-statusline-hook.md) — technical model for provider methods that retrieve live limits from statusline hook stdin payload.
-- [providers/codex.md](providers/codex.md) — ways to retrieve Codex limits.
-- [providers/claude.md](providers/claude.md) — ways to retrieve Claude limits.
-- [providers/cursor.md](providers/cursor.md) — ways to retrieve Cursor limits.
+- [from-provider-cli.md](from-provider-cli.md) — technical model for provider methods that retrieve data via the provider CLI/TUI.
+- [from-local-files.md](from-local-files.md) — technical model for provider methods that retrieve data from local transcript/telemetry files.
+- [from-statusline-hook.md](from-statusline-hook.md) — technical model for provider methods that retrieve live limits from statusline hook stdin payload.
+- [../providers/codex.md](../providers/codex.md) — ways to retrieve Codex limits.
+- [../providers/claude.md](../providers/claude.md) — ways to retrieve Claude limits.
+- [../providers/cursor.md](../providers/cursor.md) — ways to retrieve Cursor limits.
