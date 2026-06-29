@@ -18,6 +18,22 @@ impl Source {
             )),
         }
     }
+
+    pub fn label(self) -> &'static str {
+        match self {
+            Self::CodexCli => "codex-cli",
+            Self::ClaudeCli => "claude-cli",
+            Self::CursorApi2 => "cursor-api2",
+        }
+    }
+
+    pub fn heading(self) -> &'static str {
+        match self {
+            Self::CodexCli => "CODEX-CLI",
+            Self::ClaudeCli => "CLAUDE-CLI",
+            Self::CursorApi2 => "CURSOR-API2",
+        }
+    }
 }
 
 pub struct ProviderRun {
@@ -32,5 +48,11 @@ pub struct CursorRun {
 
 pub struct GetLimitsReport {
     pub summaries: Vec<String>,
+    pub stderr: String,
+}
+
+pub struct SourceReport {
+    pub source: Source,
+    pub summary: String,
     pub stderr: String,
 }
