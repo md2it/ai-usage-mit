@@ -476,7 +476,7 @@ mod tests {
 
     fn fixture_path(suffix: &str) -> PathBuf {
         env::temp_dir().join(format!(
-            "ai-usage-codex-local-{}-{suffix}.jsonl",
+            "ai-limits-codex-local-{}-{suffix}.jsonl",
             std::process::id()
         ))
     }

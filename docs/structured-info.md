@@ -105,7 +105,7 @@ If only two amount values are available and the third can be calculated reliably
 
 ## Time fields
 
-`collected_at` is the time when `ai-usage` collected or read the source data.
+`collected_at` is the time when `ai-limits` collected or read the source data.
 
 `data_as_of` is the time when the source data itself was last current. For local files, transcripts, or hook payloads, this is usually the timestamp of the latest relevant source record or session. For live API or CLI responses, this may be the response or snapshot time.
 

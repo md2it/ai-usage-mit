@@ -21,9 +21,9 @@
 - Codex inspection run executed and completed through CPAMP, but the connected CPA had no Codex auth files; therefore real Codex quota windows and quota reset values were not runtime-verified.
 - The hands-on check reinforced that Codex quota inspection is not standalone: without CPA auth files, CPAMP can only complete an empty inspection run.
 
-### Comparison to ai-usage-mit
+### Comparison to ai-limits
 
-- Goal: CPA-Manager-Plus is an ops panel and analytics layer for CLIProxyAPI; ai-usage-mit is expected to focus on AI usage tracking.
+- Goal: CPA-Manager-Plus is an ops panel and analytics layer for CLIProxyAPI; ai-limits is expected to focus on AI usage tracking.
 - Deployment: CPA-Manager-Plus is self-hosted through Docker or native binary.
 - Data source: CLIProxyAPI usage queue / HTTP usage queue / RESP fallback, plus Codex quota probing through CPA `api-call`.
 - Cost analytics: documented by model, provider, account, API key, project, channel, and time window.
@@ -32,7 +32,7 @@
 - Pricing: free / MIT.
 - Target audience: CPA self-hosters, with strong relevance to the Chinese self-hosting community noted in the original research.
 - Tracking boundary: CPA-Manager-Plus only sees usage that is converted into API traffic and routed through CLIProxyAPI. Direct provider usage, local CLI usage, and agent activity outside CPA are invisible to it.
-- Reference relevance: Threat level is low. CPA-Manager-Plus is a good CPA tool, but absolutely irrelevant for ai-usage-mit unless users intentionally proxy ordinary provider/agent usage through CLIProxyAPI.
+- Reference relevance: Threat level is low. CPA-Manager-Plus is a good CPA tool, but absolutely irrelevant for ai-limits unless users intentionally proxy ordinary provider/agent usage through CLIProxyAPI.
 
 ### What we can learn
 
@@ -155,7 +155,7 @@ CPA-Manager-Plus `v1.9.1` was installed from the official `darwin_arm64` native 
 
 ## OPEN QUESTIONS
 
-- What is the exact scope of ai-usage-mit? If it overlaps with SQLite analytics for CPA users, the reference relevance is higher.
+- What is the exact scope of ai-limits? If it overlaps with SQLite analytics for CPA users, the reference relevance is higher.
 - Do the authors of CPA-Manager-Plus plan to support sources beyond CLIProxyAPI?
-- How large is the Chinese self-hosting community as a target market for ai-usage-mit?
+- How large is the Chinese self-hosting community as a target market for ai-limits?
 - Does CPA-Manager-Plus intentionally expose Codex credit balance as a first-class UI capability, or only retain it as response-header metadata / search context?

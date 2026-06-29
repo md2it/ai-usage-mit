@@ -20,14 +20,14 @@
 - Subscription-plan quota progress, hard limits, or reset countdown for Codex/Gemini-style subscriptions was not observed.
 - The web dashboard at ccusage.com was not tested hands-on.
 
-### Comparison to ai-usage-mit
+### Comparison to ai-limits
 
-- Core value: ccusage provides historical usage reports from local JSONL files; ai-usage-mit focuses on subscription quota visibility, burn-rate, and reset countdown.
+- Core value: ccusage provides historical usage reports from local JSONL files; ai-limits focuses on subscription quota visibility, burn-rate, and reset countdown.
 - Multi-tool support: ccusage already supports 15+ tools, including Claude Code, Codex, and Gemini CLI.
 - Data source: ccusage reads local JSONL files after usage.
 - Real-time behavior: mostly post-session/local-file reporting, with Claude statusline and active block features.
 - Quota/limit tracking: partial. Claude session-block token limits and projections were observed, but no subscription progress bar or reset countdown was observed.
-- Threat level: High. ccusage is a direct open-source analog with local-file strategy, multi-tool scope, and strong adoption. The main remaining gap for ai-usage-mit is broader subscription quota visualization across supported tools.
+- Threat level: High. ccusage is a direct open-source analog with local-file strategy, multi-tool scope, and strong adoption. The main remaining gap for ai-limits is broader subscription quota visualization across supported tools.
 
 ### What we can learn
 

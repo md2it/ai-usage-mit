@@ -1,10 +1,10 @@
 [package]
-name = "ai-usage-mit"
+name = "ai-limits"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "ai-usage"
+name = "ai-limits"
 path = "src/main.rs"
 
 [dependencies]

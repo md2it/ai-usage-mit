@@ -2,7 +2,7 @@ use std::env;
 use std::io::{self, IsTerminal, Write};
 use std::time::Duration;
 
-const TOP_FRAME: &str = "=-=-=-=-=-=-=-=-=-=-=-=-= AI USAGE =-=-=-=-=-=-=-=-=-=-=-=-=";
+const TOP_FRAME: &str = "=-=-=-=-=-=-=-=-=-=-=-=-= AI LIMITS =-=-=-=-=-=-=-=-=-=-=-=-";
 const DONE_FRAME: &str = "=-=-=-=-=-=-=-=-=-=-=-=-=-= DONE =-=-=-=-=-=-=-=-=-=-=-=-=-=";
 const PART_FRAME: &str = "=-=-=-=-=-=-=-=-=-=-=-=-=-= PART =-=-=-=-=-=-=-=-=-=-=-=-=-=";
 const FAIL_FRAME: &str = "=-=-=-=-=-=-=-=-=-=-=-=-=-= FAIL =-=-=-=-=-=-=-=-=-=-=-=-=-=";

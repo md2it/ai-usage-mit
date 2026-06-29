@@ -29,7 +29,7 @@ kind: references-index
 #   - hard_stop: true/false when verified, null when not checked. Use for enforced spend/usage stop or limit-control capabilities.
 #   - conclusion: final visual research outcome, one of [💎, 👍, 🤷‍♂️, ❓, 👀, 🌚].
 #     💎 ideal; 👍 good; 🤷‍♂️ not relevant; ❓ unclear; 👀 needs more research; 🌚 not at all.
-# - Summary is a short human-readable description (positioning, data source, relevance vs ai-usage-mit).
+# - Summary is a short human-readable description (positioning, data source, relevance vs ai-limits).
 #   Do not repeat capability tags; use summary for scope caveats (e.g. "Claude only", "Codex: usage only").
 # - Details, comparison, sources and custom sections are maintained in document.
 
@@ -53,7 +53,7 @@ references:
       usage reports. Hands-on confirmed Codex token/cost output and Claude active-block
       projections; Gemini namespace exists but no local Gemini data was available to verify
       cost extraction. Does NOT expose subscription quota or reset countdown for Codex/Gemini.
-      High reference relevance — same local-file strategy and multi-tool scope as ai-usage-mit,
+      High reference relevance — same local-file strategy and multi-tool scope as ai-limits,
       but misses the cross-provider quota/limit core.
 
   claude-code-usage-monitor:
@@ -74,7 +74,7 @@ references:
       Rich UI, burn-rate tracking, and session limit predictions ("will I hit my limit?").
       Hands-on confirmed Claude cost/reset/forecast output and confirmed that real `~/.codex`
       data produced zero usage/cost/limits. Claude Code only — no Codex, Gemini CLI, or other
-      tools. High reference relevance for the Claude Code segment specifically; ai-usage-mit
+      tools. High reference relevance for the Claude Code segment specifically; ai-limits
       differentiates via multi-tool support and polished UI.
 
   claude-usage:
@@ -118,7 +118,7 @@ references:
       request ingestion from a live local CPA, dashboard/monitoring analytics, usage export,
       rolling burn-rate, and Codex inspection runs over CPA auth files. Codex quota inspection
       is not standalone: it depends on CPA `/v0/management/auth-files` and `/v0/management/api-call`.
-      Good CPA tool, but absolutely irrelevant for ai-usage-mit unless ordinary provider/agent
+      Good CPA tool, but absolutely irrelevant for ai-limits unless ordinary provider/agent
       usage is explicitly converted into API traffic routed through CLIProxyAPI.
 
   cpa-usage-keeper:
@@ -140,7 +140,7 @@ references:
       confirmed Redis-stream ingestion into SQLite, dashboard/API usage history, pricebook
       cost calculation, identity stats, and CSV/JSON export. It only tracks requests that
       were routed through CPA and became API traffic; direct provider/agent usage outside
-      CPA is invisible. Good CPA tool, but irrelevant for ai-usage-mit unless users proxy
+      CPA is invisible. Good CPA tool, but irrelevant for ai-limits unless users proxy
       their agent traffic through CLIProxyAPI.
 
   llmeter:
@@ -180,7 +180,7 @@ references:
       Open-source proxy server (CLIProxyAPI, 38,624 stars, v7.2.44 as of 2026-06-28) that
       wraps Claude Code, Codex, Gemini CLI, Grok Build, and Antigravity behind unified
       OpenAI-compatible API endpoints with multi-account load balancing. Focused on
-      access/routing, not ai-usage-mit-style observability: it only sees traffic routed
+      access/routing, not ai-limits-style observability: it only sees traffic routed
       through CLIProxyAPI and does not track normal local agent usage or provider-side
       subscription limits. Hands-on confirmed raw `/usage-queue` records only; aggregate
       dashboard/history/cost analytics live in companion tools, while `/usage` and

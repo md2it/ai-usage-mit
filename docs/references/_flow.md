@@ -79,7 +79,7 @@ Sections (in order):
 - **CONCLUSION** — fill only after the relevant research stage is done.
   - **After documentation** — 1–5 short bullets with the documentation-level conclusion.
   - **After hands-on** — 1–10 short bullets with verified usage conclusions. Include how easy it was to install, required dependencies, how it reads data, and how convenient it is to use.
-  - **Comparison to ai-usage-mit** — compact comparison and relevance assessment.
+  - **Comparison to ai-limits** — compact comparison and relevance assessment.
   - **What we can learn** — 1–5 short bullets: what the product solved well, why it matters to us, and whether to adopt, adapt, evaluate, watch, or ignore. Do not use tables here.
 - **META** — date, URL/repository, package, checked version, relevance, pricing/business model, license, and sources.
 - **DOCUMENTATION**
@@ -115,7 +115,7 @@ Rules:
   - `conclusion` — one final visual research outcome:
     - `💎` — ideal tool; outstanding fit and quality.
     - `👍` — good tool; useful, but not outstanding.
-    - `🤷‍♂️` — not relevant to ai-usage-mit, even if the tool itself may be good.
+    - `🤷‍♂️` — not relevant to ai-limits, even if the tool itself may be good.
     - `❓` — unclear; research did not produce a confident conclusion.
     - `👀` — needs further research.
-- Write `summary` in 2–4 lines: what it does, data source, key differentiator vs. ai-usage-mit, and reference relevance. Do not repeat `capabilities` tags; use `summary` for scope caveats (e.g. provider-only coverage). Include verbatim quotes for critical facts.
+- Write `summary` in 2–4 lines: what it does, data source, key differentiator vs. ai-limits, and reference relevance. Do not repeat `capabilities` tags; use `summary` for scope caveats (e.g. provider-only coverage). Include verbatim quotes for critical facts.

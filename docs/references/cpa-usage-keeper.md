@@ -23,16 +23,16 @@
 - Quota/limit/reset behavior was not verified against real provider credentials. In the mock OpenAI-compatible identity, quota cache returned no rows and quota refresh rejected the identity as `not_auth_file`.
 - No existing live CPA with real auth entries was found during the check, so hands-on did not validate real Claude/Codex/Gemini quota windows or reset timing.
 
-### Comparison to ai-usage-mit
+### Comparison to ai-limits
 
-- Standalone operation: CPA Usage Keeper requires CLIProxyAPI; ai-usage-mit is expected to operate more broadly.
+- Standalone operation: CPA Usage Keeper requires CLIProxyAPI; ai-limits is expected to operate more broadly.
 - Data source: CPA Usage Keeper reads from the CLIProxyAPI Redis queue only.
 - Storage: CPA Usage Keeper uses local SQLite.
 - Dashboard: CPA Usage Keeper has a built-in React web UI.
 - Pricing visibility: CPA Usage Keeper tracks cost and can use models.dev pricing.
 - Credential health: CPA Usage Keeper includes credential health snapshots, but hands-on only verified empty/mock identity states.
 - Export: CSV/JSON export is documented.
-- Threat level: Low for ai-usage-mit. It is a good CPA sidecar, but absolutely irrelevant for tracking user spend/usage that happens directly in providers or agents and never passes through CLIProxyAPI.
+- Threat level: Low for ai-limits. It is a good CPA sidecar, but absolutely irrelevant for tracking user spend/usage that happens directly in providers or agents and never passes through CLIProxyAPI.
 
 ### What we can learn
 

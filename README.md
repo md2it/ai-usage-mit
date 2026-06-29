@@ -1,6 +1,6 @@
-# ai-usage-mit
+# ai-limits
 
-A small local tracker for AI tool usage and subscription limits on models.
+Check subscription limits easily. Codex, Claude, Cursor.
 
 ## How it works
 
@@ -14,7 +14,7 @@ For the user, the app acts as a local assistant: it collects available usage and
 
 ## Supported features
 
-- **`ai-usage` command** — queries Codex, Claude, and Cursor in one run and prints a normalized usage/limit summary.
+- **`ai-limits` command** — queries Codex, Claude, and Cursor in one run and prints a normalized usage/limit summary.
 - **Codex**
   - **local** (`--codex-local`) — reads token usage and local `rate_limits` snapshots from `${CODEX_HOME:-~/.codex}` JSONL files.
   - **CLI** (`--codex-cli`) — reads limits via the Codex CLI `/status` command.
@@ -23,12 +23,12 @@ For the user, the app acts as a local assistant: it collects available usage and
   - **CLI** (`--claude-cli`) — reads limits via the Claude CLI `/usage` command.
   - **local** (`--claude-local`) — aggregates token usage history from local transcript JSONL files.
 - **Cursor** (`--cursor-api2`) — reads usage from `api2.cursor.sh` using a token from `cursor agent login`; if the API is unavailable, falls back to `cursor agent about/status`.
-- **Config** — optional `~/.config/ai-usage/config.toml` with `default_sources`; create with `--init-config`.
+- **Config** — optional `~/.config/ai-limits/config.toml` with `default_sources`; create with `--init-config`.
 
 Run from the repository:
 
 ```sh
-./bin/ai-usage
+./bin/ai-limits
 ```
 
 Supported flags are:
@@ -46,19 +46,19 @@ Supported flags are:
 Show CLI help:
 
 ```sh
-./bin/ai-usage --help
+./bin/ai-limits --help
 ```
 
 Create a user config:
 
 ```sh
-./bin/ai-usage --init-config
+./bin/ai-limits --init-config
 ```
 
 Query only selected sources by passing source flags:
 
 ```sh
-./bin/ai-usage --codex-local --cursor-api2
+./bin/ai-limits --codex-local --cursor-api2
 ```
 
 `--all` and `-a` force all current sources, even when the config defines a narrower default. When no source is selected, the command uses config defaults or, if no config exists, the built-in defaults: Codex local, Claude hook, Cursor API.
@@ -66,7 +66,7 @@ Query only selected sources by passing source flags:
 Optional config path:
 
 ```text
-~/.config/ai-usage/config.toml
+~/.config/ai-limits/config.toml
 ```
 
 Example:

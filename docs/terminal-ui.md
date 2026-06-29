@@ -1,21 +1,21 @@
 # Terminal UI
 
-This document describes the actual terminal interface of `ai-usage`.
+This document describes the actual terminal interface of `ai-limits`.
 
 ---
 
 ## Help
 
-`ai-usage --help` uses the common frame.
+`ai-limits --help` uses the common frame.
 
 Format:
 
 ```text
 
-=-=-=-=-=-=-=-=-=-=-=-=-= AI USAGE =-=-=-=-=-=-=-=-=-=-=-=-=
+=-=-=-=-=-=-=-=-=-=-=-=-= AI LIMITS =-=-=-=-=-=-=-=-=-=-=-=-
 
 Usage:
-  ai-usage [OPTIONS]
+  ai-limits [OPTIONS]
 
 Options:
   --help, -h       Show this help
@@ -34,13 +34,13 @@ Technical source options:
   --cursor-api2    Query Cursor through api2.cursor.sh
 
 Examples:
-  ai-usage --all
-  ai-usage --all --usage
-  ai-usage --all --raw
-  ai-usage --all --structured
+  ai-limits --all
+  ai-limits --all --usage
+  ai-limits --all --raw
+  ai-limits --all --structured
 
 Config:
-  ~/.config/ai-usage/config.toml
+  ~/.config/ai-limits/config.toml
 
   default_sources = ["codex_local", "claude_hook", "cursor_api2"]
 
@@ -59,12 +59,12 @@ Technical source options are working source selectors, but they are primarily in
 
 ### General Format
 
-Each `ai-usage` response is printed inside a common frame.
+Each `ai-limits` response is printed inside a common frame.
 
 Top frame:
 
 ```text
-=-=-=-=-=-=-=-=-=-=-=-=-= AI USAGE =-=-=-=-=-=-=-=-=-=-=-=-=
+=-=-=-=-=-=-=-=-=-=-=-=-= AI LIMITS =-=-=-=-=-=-=-=-=-=-=-=-
 ```
 
 Bottom frame:
@@ -95,9 +95,9 @@ Format:
 
 ```text
 
-=-=-=-=-=-=-=-=-=-=-=-=-= AI USAGE =-=-=-=-=-=-=-=-=-=-=-=-=
+=-=-=-=-=-=-=-=-=-=-=-=-= AI LIMITS =-=-=-=-=-=-=-=-=-=-=-=-
 
-ai-usage: unknown argument `--bad`
+ai-limits: unknown argument `--bad`
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-= FAIL =-=-=-=-=-=-=-=-=-=-=-=-=-=
 

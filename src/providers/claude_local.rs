@@ -394,7 +394,7 @@ mod tests {
     #[test]
     fn scans_usage_and_deduplicates_streaming_message_records() {
         let path = env::temp_dir().join(format!(
-            "ai-usage-claude-local-{}.jsonl",
+            "ai-limits-claude-local-{}.jsonl",
             std::process::id()
         ));
         fs::write(

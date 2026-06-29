@@ -35,13 +35,13 @@ pub fn config_path() -> io::Result<PathBuf> {
     let home = env::var_os("HOME").ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::NotFound,
-            "HOME is not set; cannot locate ~/.config/ai-usage/config.toml",
+            "HOME is not set; cannot locate ~/.config/ai-limits/config.toml",
         )
     })?;
 
     Ok(PathBuf::from(home)
         .join(".config")
-        .join("ai-usage")
+        .join("ai-limits")
         .join("config.toml"))
 }
 

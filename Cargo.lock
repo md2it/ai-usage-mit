@@ -3,7 +3,7 @@
 version = 4
 
 [[package]]
-name = "ai-usage-mit"
+name = "ai-limits"
 version = "0.1.0"
 dependencies = [
  "chrono",

@@ -20,7 +20,7 @@ pub fn run() -> ExitCode {
         Err(error) => {
             let mut ui = TerminalUi::new();
             let _ = ui.print_top();
-            println!("ai-usage: {error}");
+            println!("ai-limits: {error}");
             let _ = ui.print_bottom(TerminalStatus::Fail);
             ExitCode::FAILURE
         }
@@ -328,7 +328,7 @@ fn print_help() {
     println!(
         "\
 Usage:
-  ai-usage [OPTIONS]
+  ai-limits [OPTIONS]
 
 Options:
   --help, -h       Show this help
@@ -351,14 +351,14 @@ Output:
   --structured, -s Data converted to the common structured format
 
 Examples:
-  ai-usage --all
-  ai-usage --all -r
-  ai-usage --all --structured
-  ai-usage --codex-cli --raw
-  ai-usage --cursor-api2 -s
+  ai-limits --all
+  ai-limits --all -r
+  ai-limits --all --structured
+  ai-limits --codex-cli --raw
+  ai-limits --cursor-api2 -s
 
 Config:
-  ~/.config/ai-usage/config.toml
+  ~/.config/ai-limits/config.toml
 
   default_sources = [\"codex_local\", \"claude_hook\", \"cursor_api2\"]
 "

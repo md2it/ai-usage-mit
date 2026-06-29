@@ -20,11 +20,11 @@
 - Verified no CLI subscription quota tracking: there is no local Claude Code / Codex / Gemini CLI data access path, no real quota cap, no remaining credits balance, and no reset countdown.
 - Verified Google AI is not connectable in the current UI/code path: provider validators mark `google` as `comingSoonProviders`, and the polling registry excludes it because there is no public usage/billing API.
 
-### Comparison to ai-usage-mit
+### Comparison to ai-limits
 
-- Core value: LLMeter is a multi-provider API billing cost dashboard; ai-usage-mit focuses on subscription quota visibility for CLI-based coding tools.
-- Data source: LLMeter uses provider usage/billing APIs and an ingestion API; ai-usage-mit is expected to use local CLI session data or telemetry.
-- Target user: LLMeter targets developers with direct API spend; ai-usage-mit targets users of Claude Code, Codex, Gemini CLI, and similar subscriptions.
+- Core value: LLMeter is a multi-provider API billing cost dashboard; ai-limits focuses on subscription quota visibility for CLI-based coding tools.
+- Data source: LLMeter uses provider usage/billing APIs and an ingestion API; ai-limits is expected to use local CLI session data or telemetry.
+- Target user: LLMeter targets developers with direct API spend; ai-limits targets users of Claude Code, Codex, Gemini CLI, and similar subscriptions.
 - Locality/dependencies: LLMeter can be self-hosted, but not used as a fully local standalone tool; it needs Supabase Auth/PostgreSQL, user login, provider API keys, and optional Resend/Slack/Paddle integrations.
 - CLI subscription awareness: LLMeter does not cover Claude Code, Codex, or Gemini CLI subscription quotas.
 - Limits/credits/reset: hands-on confirmed configurable daily/monthly spend alerts and anomaly detection, but no real subscription quota cap, remaining credits balance, or reset countdown for CLI tools.

@@ -19,17 +19,17 @@
 - `/api-key-usage` exposes recent success/failed request buckets by provider/API key, not token/cost history and not OAuth subscription analytics.
 - `/management.html` and `/management` returned 404 in the isolated binary run even with `disable-control-panel: false`; Management API itself worked.
 
-### Comparison to ai-usage-mit
+### Comparison to ai-limits
 
 - Similarity: both are relevant to teams using Claude Code, Codex, Gemini CLI, and similar AI coding tools.
 - Similarity: both touch management of multiple AI subscriptions or accounts.
-- Difference: CLIProxyAPI routes AI traffic; ai-usage-mit focuses on visibility into actual subscription limit consumption and usage trends.
-- Traffic model: CLIProxyAPI puts AI traffic through a proxy; ai-usage-mit is expected to read local session data or telemetry without proxying traffic.
-- Privacy model: Router-For.ME adds an extra traffic layer, either self-hosted or through third-party relay services; ai-usage-mit can position around local-only visibility.
-- Limit visibility: routing quota state, load balancing, and account management are not counted as ai-usage-mit-style usage/cost capabilities. Hands-on confirmed the remaining built-in telemetry is raw per-request usage records, not an aggregate dashboard, usage history, cost model, forecast, reset countdown, notification system, or hard stop.
+- Difference: CLIProxyAPI routes AI traffic; ai-limits focuses on visibility into actual subscription limit consumption and usage trends.
+- Traffic model: CLIProxyAPI puts AI traffic through a proxy; ai-limits is expected to read local session data or telemetry without proxying traffic.
+- Privacy model: Router-For.ME adds an extra traffic layer, either self-hosted or through third-party relay services; ai-limits can position around local-only visibility.
+- Limit visibility: routing quota state, load balancing, and account management are not counted as ai-limits-style usage/cost capabilities. Hands-on confirmed the remaining built-in telemetry is raw per-request usage records, not an aggregate dashboard, usage history, cost model, forecast, reset countdown, notification system, or hard stop.
 - Removed feature signal: usage tracking and logging were explicitly removed in v6.10.0 with the release note "chore: remove usage tracking and logging functionality"; restore requests #3444 and #3481 were closed with `state_reason: not_planned` in May 2026.
-- Threat level: Low-Medium ecosystem relevance, but the core Router-For.ME/CLIProxyAPI product is not a direct ai-usage-mit analog after hands-on.
-- Bottom line: Router-For.ME is not an ai-usage-mit analog. It only observes requests that users intentionally route through CLIProxyAPI, and it does not track normal local agent usage, provider-side subscription limits, or usage outside the proxy conversion layer.
+- Threat level: Low-Medium ecosystem relevance, but the core Router-For.ME/CLIProxyAPI product is not a direct ai-limits analog after hands-on.
+- Bottom line: Router-For.ME is not an ai-limits analog. It only observes requests that users intentionally route through CLIProxyAPI, and it does not track normal local agent usage, provider-side subscription limits, or usage outside the proxy conversion layer.
 
 ### What we can learn
 
@@ -100,7 +100,7 @@ This research is about Router-For.ME / CLIProxyAPI itself: the proxy/router that
 
 CPA Usage Keeper, CPA-Manager-Plus, CLIProxyAPI Dashboard, and similar projects are related but separate companion tools. They consume CLIProxyAPI traffic, queues, logs, or Management API data and add persistence, dashboards, exports, quota inspection, and cost/usage analytics. Those companion capabilities are not counted as Router-For.ME core capabilities in `_INDEX.yaml`.
 
-The practical distinction matters for ai-usage-mit: CLIProxyAPI can only see traffic that goes through CLIProxyAPI. It does not passively inspect normal Claude Code / Codex / Gemini CLI usage outside the proxy, does not read local agent telemetry files, and does not provide a first-party cross-provider subscription-limit tracker.
+The practical distinction matters for ai-limits: CLIProxyAPI can only see traffic that goes through CLIProxyAPI. It does not passively inspect normal Claude Code / Codex / Gemini CLI usage outside the proxy, does not read local agent telemetry files, and does not provide a first-party cross-provider subscription-limit tracker.
 
 ### Claimed features
 
@@ -133,7 +133,7 @@ The practical distinction matters for ai-usage-mit: CLIProxyAPI can only see tra
 
 ### Overview
 
-Installed the macOS arm64 CLIProxyAPI v7.2.44 release into `.hands-on/router-for-me/`, started it on localhost with `-config .hands-on/router-for-me/config/hands-on.yaml`, and tested the Management API plus OpenAI-compatible proxy behavior. The check focused on whether current runtime behavior exposes ai-usage-mit-relevant usage/cost/limit capabilities, especially after the documented removal of built-in usage tracking.
+Installed the macOS arm64 CLIProxyAPI v7.2.44 release into `.hands-on/router-for-me/`, started it on localhost with `-config .hands-on/router-for-me/config/hands-on.yaml`, and tested the Management API plus OpenAI-compatible proxy behavior. The check focused on whether current runtime behavior exposes ai-limits-relevant usage/cost/limit capabilities, especially after the documented removal of built-in usage tracking.
 
 ### Installing
 
@@ -187,7 +187,7 @@ The test did not invoke real OAuth login because the core usage/cost question wa
 
 - Management panel availability differed from README expectations in this isolated run: the binary served API endpoints but did not serve `/management.html` even with `disable-control-panel: false`.
 - The config file is mutated on startup when `remote-management.secret-key` is plaintext; this is normal behavior but relevant for isolated testing.
-- Runtime confirms a narrow `usage` capability only. It does not confirm `cost`, `usage_history`, `limits`, `session_limits`, `reset`, `burn_rate`, `forecast`, `notifications`, or `hard_stop` for ai-usage-mit comparison.
+- Runtime confirms a narrow `usage` capability only. It does not confirm `cost`, `usage_history`, `limits`, `session_limits`, `reset`, `burn_rate`, `forecast`, `notifications`, or `hard_stop` for ai-limits comparison.
 
 ## OPEN QUESTIONS
 

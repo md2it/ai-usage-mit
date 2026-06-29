@@ -20,9 +20,9 @@
 - Chart rendering depends on CDN access unless Chart.js is cached or vendored.
 - A separate Pro/Max subscription quota progress bar was not found in the tested dashboard code or rendered HTML.
 
-### Comparison to ai-usage-mit
+### Comparison to ai-limits
 
-- Core value: claude-usage provides a local web dashboard for Claude Code usage history; ai-usage-mit targets subscription quota visibility across multiple tools.
+- Core value: claude-usage provides a local web dashboard for Claude Code usage history; ai-limits targets subscription quota visibility across multiple tools.
 - Tool support: claude-usage is Claude Code only.
 - UI: claude-usage has a localhost web dashboard.
 - VS Code integration: available.

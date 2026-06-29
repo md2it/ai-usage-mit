@@ -287,7 +287,7 @@ fn origin_diagnostics(origin: PayloadOrigin) -> Vec<String> {
     match origin {
         PayloadOrigin::Hook => vec!["data origin: hook stdin".to_string()],
         PayloadOrigin::Cache(_) => vec![
-            "data origin: cache (~/.config/ai-usage/claude-hook-payload.json)".to_string(),
+            "data origin: cache (~/.config/ai-limits/claude-hook-payload.json)".to_string(),
         ],
     }
 }
@@ -382,7 +382,7 @@ fn cache_path() -> io::Result<PathBuf> {
     })?;
     Ok(PathBuf::from(home)
         .join(".config")
-        .join("ai-usage")
+        .join("ai-limits")
         .join("claude-hook-payload.json"))
 }
 

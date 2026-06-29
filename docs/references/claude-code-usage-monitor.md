@@ -21,15 +21,15 @@
 - Cost usage and cost-rate estimates were observed, but a separate alert workflow was not triggered.
 - Long-term retention behavior was not verified.
 
-### Comparison to ai-usage-mit
+### Comparison to ai-limits
 
-- Core value: Claude-Code-Usage-Monitor provides real-time burn-rate and session limit prediction for Claude Code; ai-usage-mit targets subscription quota visibility across tools.
+- Core value: Claude-Code-Usage-Monitor provides real-time burn-rate and session limit prediction for Claude Code; ai-limits targets subscription quota visibility across tools.
 - Tool support: Claude-Code-Usage-Monitor is Claude Code only.
 - Real-time UI: confirmed terminal live UI.
 - Burn-rate and prediction: confirmed.
 - Web UI and VS Code UI: not observed.
 - Multi-provider view: not present.
-- Threat level: High. It overlaps strongly with the Claude Code segment: local-file approach, quota/burn-rate angle, and high organic demand. ai-usage-mit can differentiate through multi-tool support and a polished UI beyond terminal output.
+- Threat level: High. It overlaps strongly with the Claude Code segment: local-file approach, quota/burn-rate angle, and high organic demand. ai-limits can differentiate through multi-tool support and a polished UI beyond terminal output.
 
 ### What we can learn
 

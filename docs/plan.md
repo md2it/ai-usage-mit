@@ -3,7 +3,7 @@
 ## ✅ PoC Codex
 - Assumes the Codex CLI is already installed
 - A simple wrapper between the user and the Codex CLI
-- Shell command `ai-usage` returns the current Codex CLI `/status` response as-is
+- Shell command `ai-limits` returns the current Codex CLI `/status` response as-is
 
 ## ✅ PoC Claude
 - Same as above, but for the Claude CLI
@@ -14,7 +14,7 @@
 ## ✅ MVP
 - Supports Claude, Codex, and Cursor
 - Assumes the Claude and Codex CLIs are already installed
-- Shell command `ai-usage`
+- Shell command `ai-limits`
 
 ## Post-MVP features
 
@@ -48,7 +48,7 @@
    - Manual database cleanup
    - Cleanup by limits (period or count)
    - Desktop interface
-   - Self-analysis of this tool: how many tokens `ai-usage-mit` itself consumes
+   - Self-analysis of this tool: how many tokens `ai-limits` itself consumes
    - Later, decide what else to analyze
       - By provider
       - By model
