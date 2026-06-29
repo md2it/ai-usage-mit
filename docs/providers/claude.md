@@ -2,7 +2,11 @@
 
 ## Current Status
 
-The PoC retrieves usage/limits via the Claude CLI. The application runs the standard `claude` command, opens the interactive TUI, and sends the slash command `/usage`.
+PoC uses two Claude sources and one live-limit candidate:
+
+- `claude_cli_usage`: launches `claude --no-chrome`, sends `/usage`, parses TUI lines.
+- `claude_local_usage`: scans local transcript JSONL files and aggregates token usage history.
+- `claude_statusline_rate_limits`: reads Claude Code hook stdin payload and extracts live `rate_limits` when available.
 
 ---
 
@@ -27,12 +31,58 @@ Verified PoC details:
 
 ---
 
+## Provider Method: `claude_local_usage`
+
+Minimal sources:
+
+- `~/.config/claude/projects`
+- `~/.claude/projects`
+- `~/Library/Developer/Xcode/CodingAssistant/ClaudeAgentConfig/projects`
+
+What is extracted:
+
+- `assistant` records with non-zero `message.usage`
+- deduplicated turns by `message.id` (latest record wins in file)
+- scope summary: files, sessions, turns
+- token totals: input/output/cache-read/cache-write/total
+- top model and latest activity timestamp
+
+Behavior:
+
+- if no local roots are present, returns `local transcript roots were not found`
+- if roots exist but no token usage is found, returns `no token usage found`
+- local transcripts provide usage history; official remaining limit/reset may be unavailable
+
+---
+
+## Provider Method: `claude_statusline_rate_limits`
+
+Minimal source:
+
+- Claude Code statusline hook stdin payload
+- no TUI parsing and no transcript reconstruction for current limits
+
+How to get data:
+
+1. configure a Claude Code statusline command in `~/.claude/settings.json` or `~/.config/claude/settings.json`
+2. run the command in statusline hook context so Claude Code provides JSON payload on stdin
+3. parse `rate_limits` from stdin payload
+4. normalize available live fields for current windows (5h/7d), used progress, and reset time
+
+Behavior:
+
+- when hook payload includes `rate_limits`, this method can provide an official live signal for current Claude limits
+- when hook context is unavailable or payload has no `rate_limits`, method returns unavailable/unknown for live limits
+- this method is for current live limits, not full historical usage aggregation
+
+---
+
 ## Limitations
 
-- full output remains a TUI stream
-- the approach depends on current Claude CLI behavior and TUI text
-- a CLI request may take a noticeable amount of time
-- needs verification of whether such a request consumes user limits
+- for `claude_cli_usage`, full output remains a TUI stream and depends on current CLI text/layout
+- for `claude_cli_usage`, request/parse can take noticeable time
+- for `claude_statusline_rate_limits`, data is available only inside a properly configured Claude Code hook context
+- for `claude_statusline_rate_limits`, unavailable hook context means live limits are unavailable even if transcript history exists
 
 ---
 
@@ -41,7 +91,7 @@ Verified PoC details:
 | Option | Status | Comment |
 |---|---|---|
 | Official API | Not investigated | May apply to API accounts, but not necessarily to Claude Code subscription limits |
-| Local transcript JSONL | Candidate for usage history | Check `~/.config/claude/projects/**/*.jsonl`, `~/.claude/projects/**/*.jsonl`, and Xcode ClaudeAgentConfig; good for tokens/cost/sessions, but not always for official remaining limit |
+| Local transcript JSONL (`claude_local_usage`) | Implemented in PoC | Scans local transcript roots and aggregates token usage history by assistant turns; official remaining limit/reset may be unavailable |
 | Claude Code statusline `rate_limits` | Candidate for live limits | Hook receives JSON via stdin from Claude Code and can provide an official live signal for 5h/7d limits; requires statusline configuration |
 | Local SQLite/cache | Auxiliary layer | e.g. `~/.claude/usage.db` from `claude-usage`: convenient for dashboard and incremental scanning, but this is derived data, not a primary source |
 | Frontend/dashboard API | Research-only | Possible only with a clear and safe way to handle cookie/session tokens |

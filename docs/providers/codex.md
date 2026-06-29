@@ -2,11 +2,14 @@
 
 ## Current status
 
-PoC retrieves limits via Codex CLI. The application launches the standard `codex` command, sends `/status` to the interactive TUI, and extracts limit lines from the output.
+PoC uses two Codex sources:
+
+- `codex_cli_usage`: launches `codex`, sends `/status`, parses TUI limit lines.
+- `codex_local_usage`: scans local JSONL history in `${CODEX_HOME:-~/.codex}`, aggregates token usage, and reads local rate-limit snapshots.
 
 ---
 
-## Provider Method: `codex_cli_status`
+## Provider Method: `codex_cli_usage`
 
 Minimum commands:
 
@@ -29,6 +32,38 @@ Verified PoC details:
 
 ---
 
+## Provider Method: `codex_local_usage`
+
+Minimal source:
+
+- root: `${CODEX_HOME:-~/.codex}`
+- scanned directories: `sessions/`, `archived_sessions/`
+- scanned files: `**/*.jsonl`
+
+What is extracted:
+
+- events with `"type":"token_count"` and `"last_token_usage"`
+- totals: input, cached input, output, reasoning output, total
+- latest event timestamp
+- `rate_limits` snapshot when present: `primary.used_percent`, `primary.window_minutes`, `primary.resets_at`, `secondary.used_percent`, `secondary.window_minutes`, `secondary.resets_at`, `credits`, `plan_type`
+
+How to get these fields from local files:
+
+1. read `${CODEX_HOME:-~/.codex}/sessions/**/*.jsonl` and `${CODEX_HOME:-~/.codex}/archived_sessions/**/*.jsonl`
+2. keep only records where `type = "event_msg"` and `payload.type = "token_count"`
+3. for usage, aggregate `payload.info.last_token_usage.*`
+4. for limits/reset, read `payload.rate_limits.*` from the latest timestamped event
+5. convert `payload.rate_limits.*.resets_at` (unix seconds) into user timezone before showing
+
+Behavior:
+
+- if root is missing, returns `not found`
+- if no token events are found, returns `token events: not found`
+- local Codex JSONL can provide current local snapshot for limit percent and reset time (5h/weekly windows when present)
+- local Codex JSONL usually does not provide absolute quota size (`used_tokens`/`max_tokens`), only percent and reset window
+
+---
+
 ## Limitations
 
 - full output remains a TUI stream and may contain terminal control sequences
@@ -43,6 +78,6 @@ Verified PoC details:
 | Option | Status | Comment |
 |---|---|---|
 | Official API | Not investigated | Requires separate verification of usage/limits availability for a Codex subscription |
-| Local telemetry files | Candidate for usage history | By analogy with `ccusage`, Codex usage can be read from `${CODEX_HOME:-~/.codex}`; confirms tokens/cost/models, but not subscription limit/reset |
+| Local telemetry files (`codex_local_usage`) | Implemented in PoC | Reads `${CODEX_HOME:-~/.codex}` JSONL history, aggregates usage, and reads local `rate_limits` snapshots (`used_percent`, `resets_at`, windows, optional credits) |
 | Frontend/dashboard API | Research-only | Possible only with a clear and safe approach to session data |
 | Traffic observation | Research-only | Do not consider as a product mechanism |

@@ -51,14 +51,17 @@ Options:
   --help, -h      Show this help
   --init-config   Create the user config file if it does not exist
   --all, -a       Query all current sources, ignoring config defaults
+  --codex-local   Query Codex from local session JSONL files
   --codex-cli     Query Codex through the Codex CLI
+  --claude-hook   Query Claude from statusline hook stdin payload
   --claude-cli    Query Claude through the Claude CLI
+  --claude-local  Query Claude from local transcript JSONL files
   --cursor-api2   Query Cursor through api2.cursor.sh
 
 Config:
   ~/.config/ai-usage/config.toml
 
-  default_sources = ["codex_cli", "claude_cli", "cursor_api2"]
+  default_sources = ["codex_local", "claude_hook", "cursor_api2"]
 
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-= DONE =-=-=-=-=-=-=-=-=-=-=-=-=-=

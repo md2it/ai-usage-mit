@@ -15,7 +15,7 @@ For the user, the app acts as a local assistant: it collects available usage and
 ## Supported features
 
 - **`ai-usage` command** — queries Codex, Claude, and Cursor in one run and prints a normalized usage/limit summary.
-- **Codex** — reads limits via CLI `/status`.
+- **Codex** — reads local token usage from `${CODEX_HOME:-~/.codex}` and can still read limits via CLI `/status`.
 - **Claude** — reads limits via CLI `/usage`.
 - **Cursor** — reads usage from `api2.cursor.sh` using a token from `cursor agent login`; if the API is unavailable, falls back to `cursor agent about/status`.
 
@@ -30,8 +30,11 @@ Supported flags are:
 - `--help`, `-h`
 - `--init-config`
 - `--all`, `-a`
+- `--codex-local`
 - `--codex-cli`
+- `--claude-hook`
 - `--claude-cli`
+- `--claude-local`
 - `--cursor-api2`
 
 Show CLI help:
@@ -49,10 +52,10 @@ Create a user config:
 Query only selected sources by passing source flags:
 
 ```sh
-./bin/ai-usage --codex-cli --cursor-api2
+./bin/ai-usage --codex-local --cursor-api2
 ```
 
-`--all` and `-a` force all current sources, even when the config defines a narrower default. When no source is selected, the command uses config defaults or, if no config exists, all three current sources in the fixed output order: Codex, Claude, Cursor.
+`--all` and `-a` force all current sources, even when the config defines a narrower default. When no source is selected, the command uses config defaults or, if no config exists, the built-in defaults: Codex local, Claude hook, Cursor API.
 
 Optional config path:
 
@@ -64,9 +67,10 @@ Example:
 
 ```toml
 default_sources = [
-  "codex_cli",
+  "codex_local",
+  "claude_hook",
   "cursor_api2"
 ]
 ```
 
-The command uses the standard `codex`, `claude`, and `cursor` CLIs. Install the provider CLIs for the tools you want to query.
+CLI-backed sources use the standard `codex`, `claude`, and `cursor` CLIs. Local sources read provider files from the user's home directory.

@@ -203,11 +203,20 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
             "-a" | "--all" => {
                 parsed.all = true;
             }
+            "--codex-local" => {
+                parsed.sources.push(Source::CodexLocal);
+            }
             "--codex-cli" => {
                 parsed.sources.push(Source::CodexCli);
             }
             "--claude-cli" => {
                 parsed.sources.push(Source::ClaudeCli);
+            }
+            "--claude-hook" => {
+                parsed.sources.push(Source::ClaudeHook);
+            }
+            "--claude-local" => {
+                parsed.sources.push(Source::ClaudeLocal);
             }
             "--cursor-api2" => {
                 parsed.sources.push(Source::CursorApi2);
@@ -234,19 +243,30 @@ Options:
   --help, -h      Show this help
   --init-config   Create the user config file if it does not exist
   --all, -a       Query all current sources, ignoring config defaults
+  --codex-local   Query Codex from local session JSONL files
   --codex-cli     Query Codex through the Codex CLI
+  --claude-hook   Query Claude from statusline hook stdin payload
   --claude-cli    Query Claude through the Claude CLI
+  --claude-local  Query Claude from local transcript JSONL files
   --cursor-api2   Query Cursor through api2.cursor.sh
 
 Config:
   ~/.config/ai-usage/config.toml
 
-  default_sources = [\"codex_cli\", \"claude_cli\", \"cursor_api2\"]
+  default_sources = [\"codex_local\", \"claude_hook\", \"cursor_api2\"]
 "
     );
 }
 
 fn select_sources(args: CliArgs) -> io::Result<Vec<Source>> {
+    let config = crate::config::load()?;
+    resolve_sources(args, config)
+}
+
+fn resolve_sources(
+    args: CliArgs,
+    config: Option<crate::config::Config>,
+) -> io::Result<Vec<Source>> {
     if args.all && !args.sources.is_empty() {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
@@ -262,13 +282,50 @@ fn select_sources(args: CliArgs) -> io::Result<Vec<Source>> {
         return Ok(args.sources);
     }
 
-    let Some(config) = crate::config::load()? else {
-        return Ok(Source::ALL.to_vec());
+    let Some(config) = config else {
+        return Ok(Source::DEFAULTS.to_vec());
     };
 
     if config.default_sources.is_empty() {
-        Ok(Source::ALL.to_vec())
+        Ok(Source::DEFAULTS.to_vec())
     } else {
         Ok(config.default_sources)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+
+    fn parse(raw_args: &[&str]) -> CliArgs {
+        parse_args(raw_args.iter().map(|value| value.to_string())).expect("args should parse")
+    }
+
+    #[test]
+    fn uses_required_defaults_without_config() {
+        let args = parse(&[]);
+        let selected = resolve_sources(args, None).expect("defaults should resolve");
+
+        assert_eq!(selected, Source::DEFAULTS.to_vec());
+    }
+
+    #[test]
+    fn explicit_flags_override_config_defaults() {
+        let args = parse(&["--codex-cli", "--claude-local"]);
+        let config = Config {
+            default_sources: Source::DEFAULTS.to_vec(),
+        };
+        let selected =
+            resolve_sources(args, Some(config)).expect("explicit source flags should win");
+
+        assert_eq!(selected, vec![Source::CodexCli, Source::ClaudeLocal]);
+    }
+
+    #[test]
+    fn supports_claude_hook_flag() {
+        let args = parse(&["--claude-hook"]);
+
+        assert_eq!(args.sources, vec![Source::ClaudeHook]);
     }
 }

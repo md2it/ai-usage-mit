@@ -8,8 +8,8 @@ pub struct Config {
 
 const DEFAULT_CONFIG: &str = "\
 default_sources = [
-  \"codex_cli\",
-  \"claude_cli\",
+  \"codex_local\",
+  \"claude_hook\",
   \"cursor_api2\"
 ]
 ";
@@ -135,4 +135,27 @@ fn parse_sources_array(value: &str) -> Result<Vec<Source>, String> {
     }
 
     Ok(sources)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_default_config_sources() {
+        let parsed = parse_config(DEFAULT_CONFIG).expect("default config should parse");
+
+        assert_eq!(
+            parsed.default_sources,
+            vec![Source::CodexLocal, Source::ClaudeHook, Source::CursorApi2]
+        );
+    }
+
+    #[test]
+    fn parse_config_accepts_claude_hook() {
+        let parsed = parse_config("default_sources = [\"claude_hook\"]")
+            .expect("claude_hook should be accepted");
+
+        assert_eq!(parsed.default_sources, vec![Source::ClaudeHook]);
+    }
 }

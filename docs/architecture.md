@@ -70,7 +70,7 @@ Example:
 ```text
 providers/
   mod.rs
-  codex_cli_status.rs
+  codex_cli_usage.rs
   claude_cli_usage.rs
   cursor_api2_usage.rs
 ```
