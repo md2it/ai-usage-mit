@@ -1,19 +1,14 @@
 use std::fs;
 use std::io::{self, IsTerminal, Read};
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::path::PathBuf;
+use std::sync::mpsc;
 use std::thread;
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
-
-#[cfg(unix)]
-use std::os::unix::fs::PermissionsExt;
+use std::time::{Duration, SystemTime};
 
 use serde_json::Value;
 
-const CLAUDE_COMMAND: &str = "claude";
-const EXPECT_COMMAND: &str = "expect";
-const PROBE_PROCESS_TIMEOUT: Duration = Duration::from_secs(90);
-const PROBE_SHUTDOWN_WAIT: Duration = Duration::from_secs(2);
+const STDIN_HOOK_READ_TIMEOUT: Duration = Duration::from_millis(500);
+const CACHE_MAX_AGE: Duration = Duration::from_secs(600);
 
 #[derive(Clone, Default)]
 struct RateLimits {
@@ -33,189 +28,95 @@ struct RateLimitWindow {
 }
 
 pub fn get_usage_summary() -> io::Result<String> {
+    if let Some(payload) = read_hook_payload_from_stdin()? {
+        write_cache(&payload)?;
+        return Ok(extract_usage_summary_from_hook_payload(&payload));
+    }
+
+    if let Some(payload) = read_fresh_cache()? {
+        return Ok(with_cache_source_line(&payload));
+    }
+
+    Ok(unavailable_summary(
+        "no hook stdin payload; configure Claude Code statusline to capture payload or use --claude-cli",
+    ))
+}
+
+fn with_cache_source_line(payload: &str) -> String {
+    let mut summary = extract_usage_summary_from_hook_payload(payload);
+    if let Some(rest) = summary.strip_prefix("Claude usage:\nSource: Claude hook rate_limits\n") {
+        summary = format!("Claude usage:\nSource: Claude hook cache\n{rest}");
+    }
+    summary
+}
+
+fn read_hook_payload_from_stdin() -> io::Result<Option<String>> {
     if io::stdin().is_terminal() {
-        return probe_statusline_hook();
+        return Ok(None);
     }
 
-    let mut payload = String::new();
-    io::stdin().read_to_string(&mut payload)?;
+    let payload = read_stdin_with_timeout(STDIN_HOOK_READ_TIMEOUT)?;
     if payload.trim().is_empty() {
-        probe_statusline_hook()
+        Ok(None)
     } else {
-        Ok(extract_usage_summary_from_hook_payload(&payload))
+        Ok(Some(payload))
     }
 }
 
-fn probe_statusline_hook() -> io::Result<String> {
-    let temp_dir = create_probe_temp_dir()?;
-    let payload_path = temp_dir.join("payload.json");
-    let capture_path = temp_dir.join("capture.sh");
-    let settings_path = temp_dir.join("settings.json");
-
-    write_capture_script(&capture_path, &payload_path)?;
-    write_probe_settings(&settings_path, &capture_path)?;
-
-    let mut child = spawn_hook_probe(&settings_path)?;
-    let probe_result = wait_for_hook_payload(&mut child, &payload_path);
-    let payload = fs::read_to_string(&payload_path).ok();
-    let _ = fs::remove_dir_all(&temp_dir);
-
-    match probe_result {
-        Err(error) => Ok(unavailable_summary(&format!(
-            "Claude hook probe failed: {error}"
-        ))),
-        Ok(()) => match payload {
-            Some(payload) if !payload.trim().is_empty() => {
-                Ok(extract_usage_summary_from_hook_payload(&payload))
-            }
-            _ => Ok(unavailable_summary(
-                "Claude hook probe did not capture statusline payload",
-            )),
-        },
-    }
-}
-
-fn create_probe_temp_dir() -> io::Result<PathBuf> {
-    let nanos = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map(|duration| duration.as_nanos())
-        .unwrap_or(0);
-    let dir = std::env::temp_dir().join(format!(
-        "ai-usage-claude-hook-{nanos}-{}",
-        std::process::id()
-    ));
-    fs::create_dir_all(&dir)?;
-    Ok(dir)
-}
-
-fn write_capture_script(capture_path: &Path, payload_path: &Path) -> io::Result<()> {
-    let script = format!(
-        "#!/bin/sh\ncat > {}\necho ok\n",
-        shell_single_quote(payload_path)
-    );
-    fs::write(capture_path, script)?;
-    set_executable(capture_path)?;
-    Ok(())
-}
-
-fn write_probe_settings(settings_path: &Path, capture_path: &Path) -> io::Result<()> {
-    let settings = serde_json::json!({
-        "statusLine": {
-            "type": "command",
-            "command": capture_path.to_string_lossy(),
-        }
+fn read_stdin_with_timeout(timeout: Duration) -> io::Result<String> {
+    let (sender, receiver) = mpsc::channel();
+    thread::spawn(move || {
+        let mut payload = String::new();
+        let result = io::stdin().read_to_string(&mut payload).map(|_| payload);
+        let _ = sender.send(result);
     });
-    fs::write(settings_path, settings.to_string())
-}
 
-fn set_executable(path: &Path) -> io::Result<()> {
-    #[cfg(unix)]
-    {
-        let mut permissions = fs::metadata(path)?.permissions();
-        permissions.set_mode(0o755);
-        fs::set_permissions(path, permissions)?;
-    }
-    Ok(())
-}
-
-fn shell_single_quote(path: &Path) -> String {
-    format!(
-        "'{}'",
-        path.display().to_string().replace('\'', "'\\''")
-    )
-}
-
-fn spawn_hook_probe(settings_path: &Path) -> io::Result<std::process::Child> {
-    let settings_path = settings_path.to_string_lossy();
-    let expect_script = format!(
-        r#"set timeout 20
-log_user 0
-spawn env TERM=xterm-256color COLUMNS=120 LINES=40 sh -c {{stty cols 120 rows 40; exec {CLAUDE_COMMAND} --no-chrome --settings {settings_path}}}
-expect {{
-    -re {{Choose.*text.*style|Syntax theme}} {{
-        send "\r"
-        exp_continue
-    }}
-    -re {{for shortcuts|Do you trust|Select login method}} {{}}
-    timeout {{}}
-}}
-after 500
-send -- "Reply with exactly: pong\r"
-set timeout 60
-expect {{
-    -re {{pong|Pong}} {{}}
-    timeout {{}}
-}}
-set timeout 5
-expect {{
-    eof {{}}
-    timeout {{exit 0}}
-}}
-"#
-    );
-
-    Command::new(EXPECT_COMMAND)
-        .args(["-c", &expect_script])
-        .env("TERM", "xterm-256color")
-        .env("COLUMNS", "120")
-        .env("LINES", "40")
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|error| {
-            io::Error::new(
-                error.kind(),
-                format!("failed to run `{EXPECT_COMMAND}` for Claude hook probe: {error}"),
-            )
-        })
-}
-
-fn wait_for_hook_payload(
-    child: &mut std::process::Child,
-    payload_path: &Path,
-) -> io::Result<()> {
-    let started_at = Instant::now();
-
-    loop {
-        if payload_path.exists() {
-            if payload_contains_rate_limits(payload_path)? {
-                let _ = child.kill();
-                let _ = child.wait();
-                thread::sleep(PROBE_SHUTDOWN_WAIT);
-                return Ok(());
-            }
+    match receiver.recv_timeout(timeout) {
+        Ok(Ok(payload)) => Ok(payload),
+        Ok(Err(error)) => Err(error),
+        Err(mpsc::RecvTimeoutError::Timeout) | Err(mpsc::RecvTimeoutError::Disconnected) => {
+            Ok(String::new())
         }
-
-        if child.try_wait()?.is_some() {
-            thread::sleep(PROBE_SHUTDOWN_WAIT);
-            return Ok(());
-        }
-
-        if started_at.elapsed() >= PROBE_PROCESS_TIMEOUT {
-            let _ = child.kill();
-            let _ = child.wait();
-            return Err(io::Error::new(
-                io::ErrorKind::TimedOut,
-                "Claude hook probe timed out",
-            ));
-        }
-
-        thread::sleep(Duration::from_millis(200));
     }
 }
 
-fn payload_contains_rate_limits(payload_path: &Path) -> io::Result<bool> {
-    let payload = fs::read_to_string(payload_path)?;
-    let record = match serde_json::from_str::<Value>(&payload) {
-        Ok(record) => record,
-        Err(_) => return Ok(false),
+fn cache_path() -> io::Result<PathBuf> {
+    let home = std::env::var_os("HOME").ok_or_else(|| {
+        io::Error::new(io::ErrorKind::NotFound, "HOME is not set")
+    })?;
+    Ok(PathBuf::from(home)
+        .join(".config")
+        .join("ai-usage")
+        .join("claude-hook-payload.json"))
+}
+
+fn write_cache(payload: &str) -> io::Result<()> {
+    let path = cache_path()?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(path, payload)
+}
+
+fn read_fresh_cache() -> io::Result<Option<String>> {
+    let path = cache_path()?;
+    let metadata = match fs::metadata(&path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(error) => return Err(error),
     };
-    let Some(rate_limits_value) = locate_rate_limits(&record) else {
-        return Ok(false);
-    };
-    let rate_limits = parse_rate_limits(rate_limits_value);
-    Ok(rate_limits.primary.is_some() || rate_limits.secondary.is_some())
+
+    let modified = metadata.modified().unwrap_or(SystemTime::UNIX_EPOCH);
+    if modified.elapsed().unwrap_or(CACHE_MAX_AGE) > CACHE_MAX_AGE {
+        return Ok(None);
+    }
+
+    let payload = fs::read_to_string(&path)?;
+    if payload.trim().is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(payload))
+    }
 }
 
 pub fn extract_usage_summary_from_hook_payload(payload: &str) -> String {
@@ -469,5 +370,13 @@ mod tests {
             "Claude hook live limits unavailable: `rate_limits` has no supported limit fields"
         ));
         assert!(summary.contains("Fallback: Claude CLI /usage or claude_local history"));
+    }
+
+    #[test]
+    fn with_cache_source_line_relabels_summary() {
+        let payload = r#"{"rate_limits":{"five_hour":{"used_percentage":1,"resets_at":1782721800}}}"#;
+        let summary = with_cache_source_line(payload);
+        assert!(summary.contains("Source: Claude hook cache\n"));
+        assert!(!summary.contains("Source: Claude hook rate_limits"));
     }
 }
