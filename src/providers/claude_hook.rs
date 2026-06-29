@@ -5,15 +5,31 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, SystemTime};
 
+use chrono::{DateTime, Utc};
 use serde_json::Value;
+
+use crate::types::{
+    AccountInfo, LimitInfo, SourceData, SourceStatus, StructuredSourceInfo, UsageInfo,
+};
 
 const STDIN_HOOK_READ_TIMEOUT: Duration = Duration::from_millis(500);
 const CACHE_MAX_AGE: Duration = Duration::from_secs(600);
+const PROVIDER: &str = "claude";
+const SOURCE: &str = "claude_statusline_rate_limits";
+const SOURCE_LINK: &str = "docs/get-info/providers/claude.md";
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum PayloadOrigin {
+    Hook,
+    Cache(Option<SystemTime>),
+}
 
 #[derive(Clone, Default)]
 struct RateLimits {
+    primary_name: &'static str,
     primary_label: &'static str,
     primary: Option<RateLimitWindow>,
+    secondary_name: &'static str,
     secondary_label: &'static str,
     secondary: Option<RateLimitWindow>,
     credits: Option<f64>,
@@ -27,27 +43,307 @@ struct RateLimitWindow {
     resets_at: Option<u64>,
 }
 
-pub fn get_usage_summary() -> io::Result<String> {
+pub fn collect() -> io::Result<SourceData> {
     if let Some(payload) = read_hook_payload_from_stdin()? {
         write_cache(&payload)?;
-        return Ok(extract_usage_summary_from_hook_payload(&payload));
+        return Ok(build_source_data_with_origin(payload, PayloadOrigin::Hook));
     }
 
-    if let Some(payload) = read_fresh_cache()? {
-        return Ok(with_cache_source_line(&payload));
+    if let Some((payload, modified_at)) = read_fresh_cache()? {
+        return Ok(build_source_data_with_origin(
+            payload,
+            PayloadOrigin::Cache(Some(modified_at)),
+        ));
     }
 
-    Ok(unavailable_summary(
+    Ok(unavailable_source_data(
         "no hook stdin payload; configure Claude Code statusline to capture payload or use --claude-cli",
     ))
 }
 
-fn with_cache_source_line(payload: &str) -> String {
-    let mut summary = extract_usage_summary_from_hook_payload(payload);
-    if let Some(rest) = summary.strip_prefix("Claude usage:\nSource: Claude hook rate_limits\n") {
-        summary = format!("Claude usage:\nSource: Claude hook cache\n{rest}");
+pub fn structured_from_payload(payload: &str, from_cache: bool) -> StructuredSourceInfo {
+    build_structured_from_payload(
+        payload,
+        if from_cache {
+            PayloadOrigin::Cache(None)
+        } else {
+            PayloadOrigin::Hook
+        },
+    )
+}
+
+pub fn unavailable_structured(message: &str) -> StructuredSourceInfo {
+    unavailable_source_data(message).structured
+}
+
+pub fn build_source_data(payload: String, from_cache: bool) -> SourceData {
+    build_source_data_with_origin(
+        payload,
+        if from_cache {
+            PayloadOrigin::Cache(None)
+        } else {
+            PayloadOrigin::Hook
+        },
+    )
+}
+
+fn build_source_data_with_origin(payload: String, origin: PayloadOrigin) -> SourceData {
+    SourceData {
+        raw: Some(payload.clone()),
+        structured: build_structured_from_payload(&payload, origin),
+        stderr: String::new(),
     }
-    summary
+}
+
+fn build_structured_from_payload(payload: &str, origin: PayloadOrigin) -> StructuredSourceInfo {
+    let mut diagnostics = origin_diagnostics(origin);
+    let collected_at = utc_now();
+
+    fn finish(
+        origin: PayloadOrigin,
+        collected_at: String,
+        mut diagnostics: Vec<String>,
+        status: SourceStatus,
+        raw_data_available: bool,
+        account: AccountInfo,
+        limits: Vec<LimitInfo>,
+        usage: UsageInfo,
+    ) -> StructuredSourceInfo {
+        let (data_as_of, data_as_of_diagnostics) =
+            data_as_of_for_payload(origin, &collected_at, status.data_available);
+        diagnostics.extend(data_as_of_diagnostics);
+
+        StructuredSourceInfo {
+            provider: PROVIDER.to_string(),
+            source: SOURCE.to_string(),
+            source_link: SOURCE_LINK.to_string(),
+            status,
+            raw_data_available,
+            collected_at: Some(collected_at),
+            data_as_of,
+            account,
+            limits,
+            usage,
+            diagnostics,
+        }
+    }
+
+    let payload = payload.trim();
+
+    if payload.is_empty() {
+        return finish(
+            origin,
+            collected_at,
+            diagnostics,
+            SourceStatus {
+                data_available: false,
+                access_available: true,
+                message: Some("hook stdin payload is empty".to_string()),
+            },
+            true,
+            AccountInfo::default(),
+            Vec::new(),
+            Default::default(),
+        );
+    }
+
+    let record = match serde_json::from_str::<Value>(payload) {
+        Ok(record) => record,
+        Err(_) => {
+            diagnostics.push("hook stdin payload is not valid JSON".to_string());
+            return finish(
+                origin,
+                collected_at,
+                diagnostics,
+                SourceStatus {
+                    data_available: false,
+                    access_available: true,
+                    message: Some("hook stdin payload is not valid JSON".to_string()),
+                },
+                true,
+                AccountInfo::default(),
+                Vec::new(),
+                Default::default(),
+            );
+        }
+    };
+
+    let Some(rate_limits_value) = locate_rate_limits(&record) else {
+        diagnostics.push("`rate_limits` field is missing in hook payload".to_string());
+        return finish(
+            origin,
+            collected_at,
+            diagnostics,
+            SourceStatus {
+                data_available: false,
+                access_available: true,
+                message: Some("`rate_limits` field is missing in hook payload".to_string()),
+            },
+            true,
+            AccountInfo::default(),
+            Vec::new(),
+            Default::default(),
+        );
+    };
+
+    let rate_limits = parse_rate_limits(rate_limits_value);
+    let limits = build_structured_limits(&rate_limits);
+    if limits.is_empty()
+        && rate_limits.credits.is_none()
+        && rate_limits.plan_type.is_none()
+    {
+        diagnostics.push("`rate_limits` has no supported limit fields".to_string());
+        return finish(
+            origin,
+            collected_at,
+            diagnostics,
+            SourceStatus {
+                data_available: false,
+                access_available: true,
+                message: Some("`rate_limits` has no supported limit fields".to_string()),
+            },
+            true,
+            account_from_rate_limits(&rate_limits),
+            limits,
+            Default::default(),
+        );
+    }
+
+    finish(
+        origin,
+        collected_at,
+        diagnostics,
+        SourceStatus {
+            data_available: true,
+            access_available: true,
+            message: None,
+        },
+        true,
+        account_from_rate_limits(&rate_limits),
+        limits,
+        Default::default(),
+    )
+}
+
+fn utc_now() -> String {
+    Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()
+}
+
+fn data_as_of_for_payload(
+    origin: PayloadOrigin,
+    collected_at: &str,
+    data_available: bool,
+) -> (Option<String>, Vec<String>) {
+    if !data_available {
+        return (None, Vec::new());
+    }
+
+    match origin {
+        PayloadOrigin::Hook => (Some(collected_at.to_string()), Vec::new()),
+        PayloadOrigin::Cache(modified_at) => match modified_at.and_then(system_time_to_rfc3339) {
+            Some(timestamp) => (Some(timestamp), Vec::new()),
+            None => (
+                None,
+                vec!["data_as_of unavailable: cache modified time is unknown".to_string()],
+            ),
+        },
+    }
+}
+
+fn system_time_to_rfc3339(time: SystemTime) -> Option<String> {
+    time.duration_since(SystemTime::UNIX_EPOCH)
+        .ok()
+        .and_then(|duration| {
+            DateTime::<Utc>::from_timestamp(duration.as_secs() as i64, duration.subsec_nanos())
+                .map(|value| value.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+        })
+}
+
+fn unavailable_source_data(message: &str) -> SourceData {
+    SourceData {
+        raw: None,
+        structured: StructuredSourceInfo {
+            provider: PROVIDER.to_string(),
+            source: SOURCE.to_string(),
+            source_link: SOURCE_LINK.to_string(),
+            status: SourceStatus {
+                data_available: false,
+                access_available: false,
+                message: Some(message.to_string()),
+            },
+            raw_data_available: false,
+            collected_at: None,
+            data_as_of: None,
+            account: AccountInfo::default(),
+            limits: Vec::new(),
+            usage: Default::default(),
+            diagnostics: Vec::new(),
+        },
+        stderr: String::new(),
+    }
+}
+
+fn origin_diagnostics(origin: PayloadOrigin) -> Vec<String> {
+    match origin {
+        PayloadOrigin::Hook => vec!["data origin: hook stdin".to_string()],
+        PayloadOrigin::Cache(_) => vec![
+            "data origin: cache (~/.config/ai-usage/claude-hook-payload.json)".to_string(),
+        ],
+    }
+}
+
+fn account_from_rate_limits(rate_limits: &RateLimits) -> AccountInfo {
+    AccountInfo {
+        plan: rate_limits.plan_type.clone(),
+        credits_total: None,
+        credits_used: None,
+        credits_remaining: rate_limits.credits,
+    }
+}
+
+fn build_structured_limits(rate_limits: &RateLimits) -> Vec<LimitInfo> {
+    let mut limits = Vec::new();
+    if let Some(limit) = structured_limit(
+        rate_limits.primary_name,
+        rate_limits.primary_label,
+        &rate_limits.primary,
+    ) {
+        limits.push(limit);
+    }
+    if let Some(limit) = structured_limit(
+        rate_limits.secondary_name,
+        rate_limits.secondary_label,
+        &rate_limits.secondary,
+    ) {
+        limits.push(limit);
+    }
+    limits
+}
+
+fn structured_limit(
+    name: &str,
+    window_label: &str,
+    window: &Option<RateLimitWindow>,
+) -> Option<LimitInfo> {
+    let window = window.as_ref()?;
+    let used_percent = window.used_percent;
+    Some(LimitInfo {
+        name: name.to_string(),
+        window_label: Some(window_label.to_string()),
+        window_minutes: window.window_minutes,
+        resets_at: window.resets_at.map(format_unix_utc),
+        used_percent,
+        remaining_percent: used_percent.map(remaining_percent),
+        used_amount: None,
+        remaining_amount: None,
+        total_amount: None,
+        amount_unit: None,
+    })
+}
+
+fn remaining_percent(used_percent: f64) -> f64 {
+    let raw = (100.0 - used_percent).max(0.0);
+    (raw * 10.0).round() / 10.0
 }
 
 fn read_hook_payload_from_stdin() -> io::Result<Option<String>> {
@@ -98,7 +394,7 @@ fn write_cache(payload: &str) -> io::Result<()> {
     fs::write(path, payload)
 }
 
-fn read_fresh_cache() -> io::Result<Option<String>> {
+fn read_fresh_cache() -> io::Result<Option<(String, SystemTime)>> {
     let path = cache_path()?;
     let metadata = match fs::metadata(&path) {
         Ok(metadata) => metadata,
@@ -115,54 +411,8 @@ fn read_fresh_cache() -> io::Result<Option<String>> {
     if payload.trim().is_empty() {
         Ok(None)
     } else {
-        Ok(Some(payload))
+        Ok(Some((payload, modified)))
     }
-}
-
-pub fn extract_usage_summary_from_hook_payload(payload: &str) -> String {
-    let payload = payload.trim();
-    if payload.is_empty() {
-        return unavailable_summary("hook stdin payload is empty");
-    }
-
-    let record = match serde_json::from_str::<Value>(payload) {
-        Ok(record) => record,
-        Err(_) => return unavailable_summary("hook stdin payload is not valid JSON"),
-    };
-
-    let Some(rate_limits_value) = locate_rate_limits(&record) else {
-        return unavailable_summary("`rate_limits` field is missing in hook payload");
-    };
-
-    let rate_limits = parse_rate_limits(rate_limits_value);
-    if rate_limits.primary.is_none()
-        && rate_limits.secondary.is_none()
-        && rate_limits.credits.is_none()
-        && rate_limits.plan_type.is_none()
-    {
-        return unavailable_summary("`rate_limits` has no supported limit fields");
-    }
-
-    let mut summary = String::from("Claude usage:\n");
-    summary.push_str("Source: Claude hook rate_limits\n");
-    summary.push_str(&format_rate_limit_window(
-        rate_limits.primary_label,
-        &rate_limits.primary,
-    ));
-    summary.push_str(&format_rate_limit_window(
-        rate_limits.secondary_label,
-        &rate_limits.secondary,
-    ));
-
-    if let Some(credits) = rate_limits.credits {
-        summary.push_str(&format!("Credits: {}\n", format_decimal(credits)));
-    }
-
-    if let Some(plan_type) = rate_limits.plan_type {
-        summary.push_str(&format!("Plan: {plan_type}\n"));
-    }
-
-    summary
 }
 
 fn locate_rate_limits(record: &Value) -> Option<&Value> {
@@ -172,33 +422,39 @@ fn locate_rate_limits(record: &Value) -> Option<&Value> {
 }
 
 fn parse_rate_limits(value: &Value) -> RateLimits {
-    let (primary_label, primary) = if value.get("five_hour").is_some() {
+    let (primary_name, primary_label, primary) = if value.get("five_hour").is_some() {
         (
+            "five_hour",
             "5-hour window",
             parse_named_window(value.get("five_hour"), 300),
         )
     } else {
         (
+            "primary",
             "Primary window",
             parse_rate_limit_window(value.get("primary")),
         )
     };
 
-    let (secondary_label, secondary) = if value.get("seven_day").is_some() {
+    let (secondary_name, secondary_label, secondary) = if value.get("seven_day").is_some() {
         (
+            "seven_day",
             "7-day window",
             parse_named_window(value.get("seven_day"), 10080),
         )
     } else {
         (
+            "secondary",
             "Secondary window",
             parse_rate_limit_window(value.get("secondary")),
         )
     };
 
     RateLimits {
+        primary_name,
         primary_label,
         primary,
+        secondary_name,
         secondary_label,
         secondary,
         credits: value.get("credits").and_then(number_f64_any),
@@ -251,59 +507,17 @@ fn number_f64_any(value: &Value) -> Option<f64> {
     value.as_str().and_then(|raw| raw.parse::<f64>().ok())
 }
 
-fn format_rate_limit_window(label: &str, value: &Option<RateLimitWindow>) -> String {
-    let Some(value) = value else {
-        return format!("{label}: unavailable\n");
-    };
-
-    let mut details = Vec::new();
-    if let Some(used_percent) = value.used_percent {
-        details.push(format!("used {}%", format_decimal(used_percent)));
-    }
-    if let Some(window_minutes) = value.window_minutes {
-        details.push(format!("window {}", format_window(window_minutes)));
-    }
-    if let Some(resets_at) = value.resets_at {
-        details.push(format!("resets at {resets_at} (unix)"));
-    }
-
-    if details.is_empty() {
-        format!("{label}: unavailable\n")
-    } else {
-        format!("{label}: {}\n", details.join(", "))
-    }
-}
-
-fn format_window(minutes: u64) -> String {
-    match minutes {
-        300 => "5h (300m)".to_string(),
-        10080 => "weekly (10080m)".to_string(),
-        _ => format!("{minutes}m"),
-    }
-}
-
-fn format_decimal(value: f64) -> String {
-    let rounded = (value * 10.0).round() / 10.0;
-    if rounded.fract() == 0.0 {
-        format!("{rounded:.0}")
-    } else {
-        format!("{rounded:.1}")
-    }
-}
-
-fn unavailable_summary(reason: &str) -> String {
-    format!(
-        "Claude usage:\nClaude hook live limits unavailable: {reason}\nFallback: Claude CLI /usage or claude_local history\n"
-    )
+fn format_unix_utc(seconds: u64) -> String {
+    DateTime::<Utc>::from_timestamp(seconds as i64, 0)
+        .map(|value| value.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+        .unwrap_or_else(|| format!("{seconds} (unix)"))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    #[test]
-    fn parses_hook_rate_limits_with_supported_fields() {
-        let payload = r#"{
+    const SAMPLE_PAYLOAD: &str = r#"{
   "rate_limits": {
     "primary": {"used_percent":"45","window_minutes":"300","resets_at":"1750003600"},
     "secondary": {"used_percent":71.9,"window_minutes":10080,"resets_at":1750600000},
@@ -312,71 +526,141 @@ mod tests {
   }
 }"#;
 
-        let summary = extract_usage_summary_from_hook_payload(payload);
-        assert!(summary.contains("Source: Claude hook rate_limits"));
-        assert!(summary
-            .contains("Primary window: used 45%, window 5h (300m), resets at 1750003600 (unix)"));
-        assert!(summary.contains(
-            "Secondary window: used 71.9%, window weekly (10080m), resets at 1750600000 (unix)"
-        ));
-        assert!(summary.contains("Credits: 123.6"));
-        assert!(summary.contains("Plan: max"));
-    }
-
-    #[test]
-    fn parses_official_statusline_rate_limits() {
-        let payload = r#"{
+    const STATUSLINE_PAYLOAD: &str = r#"{
   "rate_limits": {
     "five_hour": {"used_percentage": 1, "resets_at": 1782721800},
     "seven_day": {"used_percentage": 69, "resets_at": 1782813600}
   }
 }"#;
 
-        let summary = extract_usage_summary_from_hook_payload(payload);
-        assert!(summary.contains(
-            "5-hour window: used 1%, window 5h (300m), resets at 1782721800 (unix)"
-        ));
-        assert!(summary.contains(
-            "7-day window: used 69%, window weekly (10080m), resets at 1782813600 (unix)"
-        ));
+    #[test]
+    fn structured_data_from_representative_hook_payload() {
+        let data = build_source_data(SAMPLE_PAYLOAD.to_string(), false);
+        let structured = &data.structured;
+
+        assert_eq!(data.raw.as_deref(), Some(SAMPLE_PAYLOAD));
+        assert_eq!(structured.provider, "claude");
+        assert_eq!(structured.source, "claude_statusline_rate_limits");
+        assert_eq!(structured.source_link, SOURCE_LINK);
+        assert!(structured.status.data_available);
+        assert!(structured.status.access_available);
+        assert!(structured.status.message.is_none());
+        assert!(structured.raw_data_available);
+        assert!(structured.collected_at.is_some());
+        assert_eq!(
+            structured.data_as_of.as_deref(),
+            structured.collected_at.as_deref()
+        );
+        assert_eq!(structured.account.plan.as_deref(), Some("max"));
+        assert_eq!(structured.account.credits_remaining, Some(123.6));
+        assert_eq!(structured.limits.len(), 2);
+
+        let primary = &structured.limits[0];
+        assert_eq!(primary.name, "primary");
+        assert_eq!(primary.window_label.as_deref(), Some("Primary window"));
+        assert_eq!(primary.window_minutes, Some(300));
+        assert_eq!(primary.used_percent, Some(45.0));
+        assert_eq!(primary.remaining_percent, Some(55.0));
+        assert_eq!(primary.resets_at.as_deref(), Some("2025-06-15T16:06:40Z"));
+
+        let secondary = &structured.limits[1];
+        assert_eq!(secondary.name, "secondary");
+        assert_eq!(secondary.used_percent, Some(71.9));
+        assert_eq!(secondary.remaining_percent, Some(28.1));
+        assert_eq!(secondary.resets_at.as_deref(), Some("2025-06-22T13:46:40Z"));
+        assert!(structured.diagnostics.contains(&"data origin: hook stdin".to_string()));
     }
 
     #[test]
-    fn handles_missing_rate_limits_with_clear_fallback() {
+    fn structured_data_from_official_statusline_payload() {
+        let structured = structured_from_payload(STATUSLINE_PAYLOAD, false);
+
+        assert!(structured.status.data_available);
+        assert_eq!(structured.limits.len(), 2);
+        assert_eq!(structured.limits[0].name, "five_hour");
+        assert_eq!(structured.limits[0].window_label.as_deref(), Some("5-hour window"));
+        assert_eq!(structured.limits[0].window_minutes, Some(300));
+        assert_eq!(structured.limits[0].used_percent, Some(1.0));
+        assert_eq!(structured.limits[0].remaining_percent, Some(99.0));
+        assert_eq!(structured.limits[1].name, "seven_day");
+        assert_eq!(structured.limits[1].window_minutes, Some(10080));
+        assert_eq!(structured.limits[1].used_percent, Some(69.0));
+        assert_eq!(structured.limits[1].remaining_percent, Some(31.0));
+    }
+
+    #[test]
+    fn structured_data_marks_missing_rate_limits_as_accessible_but_unavailable() {
         let payload = r#"{"hook_event":"statusline","payload":{"session_id":"abc"}}"#;
-        let summary = extract_usage_summary_from_hook_payload(payload);
+        let data = build_source_data(payload.to_string(), false);
+        let structured = &data.structured;
 
-        assert!(summary.contains(
-            "Claude hook live limits unavailable: `rate_limits` field is missing in hook payload"
-        ));
-        assert!(summary.contains("Fallback: Claude CLI /usage or claude_local history"));
+        assert_eq!(data.raw.as_deref(), Some(payload));
+        assert!(!structured.status.data_available);
+        assert!(structured.status.access_available);
+        assert!(structured.raw_data_available);
+        assert_eq!(
+            structured.status.message.as_deref(),
+            Some("`rate_limits` field is missing in hook payload")
+        );
+        assert!(structured
+            .diagnostics
+            .iter()
+            .any(|entry| entry.contains("rate_limits")));
     }
 
     #[test]
-    fn handles_invalid_json_with_clear_fallback() {
-        let summary = extract_usage_summary_from_hook_payload("{invalid");
+    fn structured_data_marks_invalid_json_with_diagnostics() {
+        let payload = "{invalid";
+        let structured = structured_from_payload(payload, false);
 
-        assert!(summary
-            .contains("Claude hook live limits unavailable: hook stdin payload is not valid JSON"));
-        assert!(summary.contains("Fallback: Claude CLI /usage or claude_local history"));
+        assert!(!structured.status.data_available);
+        assert!(structured.status.access_available);
+        assert!(structured.raw_data_available);
+        assert_eq!(
+            structured.status.message.as_deref(),
+            Some("hook stdin payload is not valid JSON")
+        );
+        assert!(structured
+            .diagnostics
+            .iter()
+            .any(|entry| entry.contains("valid JSON")));
     }
 
     #[test]
-    fn handles_rate_limits_without_supported_fields() {
+    fn structured_data_marks_no_access_when_hook_context_missing() {
+        let data = unavailable_source_data("hook context unavailable");
+
+        assert!(data.raw.is_none());
+        assert!(!data.structured.status.access_available);
+        assert!(!data.structured.status.data_available);
+        assert!(!data.structured.raw_data_available);
+        assert_eq!(
+            data.structured.status.message.as_deref(),
+            Some("hook context unavailable")
+        );
+    }
+
+    #[test]
+    fn structured_data_notes_cache_origin_in_diagnostics() {
+        let structured = structured_from_payload(SAMPLE_PAYLOAD, true);
+
+        assert!(structured
+            .diagnostics
+            .iter()
+            .any(|entry| entry.contains("data origin: cache")));
+    }
+
+    #[test]
+    fn structured_data_marks_unsupported_rate_limit_fields() {
         let payload = r#"{"rate_limits":{"primary":{"foo":"bar"}}}"#;
-        let summary = extract_usage_summary_from_hook_payload(payload);
+        let structured = structured_from_payload(payload, false);
 
-        assert!(summary.contains(
-            "Claude hook live limits unavailable: `rate_limits` has no supported limit fields"
-        ));
-        assert!(summary.contains("Fallback: Claude CLI /usage or claude_local history"));
-    }
-
-    #[test]
-    fn with_cache_source_line_relabels_summary() {
-        let payload = r#"{"rate_limits":{"five_hour":{"used_percentage":1,"resets_at":1782721800}}}"#;
-        let summary = with_cache_source_line(payload);
-        assert!(summary.contains("Source: Claude hook cache\n"));
-        assert!(!summary.contains("Source: Claude hook rate_limits"));
+        assert!(!structured.status.data_available);
+        assert!(structured.status.access_available);
+        assert_eq!(
+            structured.status.message.as_deref(),
+            Some("`rate_limits` has no supported limit fields")
+        );
+        assert!(structured.limits.is_empty());
     }
 }
