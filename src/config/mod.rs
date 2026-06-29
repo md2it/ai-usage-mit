@@ -31,26 +31,7 @@ pub fn load() -> io::Result<Option<Config>> {
     })
 }
 
-pub fn init() -> io::Result<PathBuf> {
-    let path = config_path()?;
-
-    if path.exists() {
-        return Err(io::Error::new(
-            io::ErrorKind::AlreadyExists,
-            format!("config already exists: {}", path.display()),
-        ));
-    }
-
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-
-    fs::write(&path, DEFAULT_CONFIG)?;
-
-    Ok(path)
-}
-
-fn config_path() -> io::Result<PathBuf> {
+pub fn config_path() -> io::Result<PathBuf> {
     let home = env::var_os("HOME").ok_or_else(|| {
         io::Error::new(
             io::ErrorKind::NotFound,
@@ -62,6 +43,14 @@ fn config_path() -> io::Result<PathBuf> {
         .join(".config")
         .join("ai-usage")
         .join("config.toml"))
+}
+
+pub fn write_default(path: &std::path::Path) -> io::Result<()> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    fs::write(path, DEFAULT_CONFIG)
 }
 
 fn parse_config(content: &str) -> Result<Config, String> {

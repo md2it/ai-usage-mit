@@ -49,7 +49,7 @@ Usage:
 
 Options:
   --help, -h      Show this help
-  --init-config   Create the user config file if it does not exist
+  --init-config   Create / overwrite the user config file
   --all, -a       Query all current sources, ignoring config defaults
   --codex-local   Query Codex from local session JSONL files
   --codex-cli     Query Codex through the Codex CLI

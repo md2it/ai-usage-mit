@@ -1,4 +1,5 @@
-use std::io;
+use std::io::{self, BufRead, IsTerminal, Write};
+use std::path::Path;
 use std::process::ExitCode;
 use std::sync::mpsc;
 use std::thread;
@@ -45,12 +46,8 @@ fn run_cli() -> io::Result<TerminalStatus> {
             ));
         }
 
-        let path = crate::config::init()?;
-        let mut ui = TerminalUi::new();
-        ui.print_top()?;
-        println!("Created config: {}", path.display());
-        ui.print_bottom(TerminalStatus::Done)?;
-        return Ok(TerminalStatus::Done);
+        let status = run_init_config()?;
+        return Ok(status);
     }
 
     let sources = select_sources(args)?;
@@ -72,6 +69,63 @@ struct RunningSource {
 struct SourceEvent {
     source: Source,
     result: io::Result<SourceReport>,
+}
+
+fn run_init_config() -> io::Result<TerminalStatus> {
+    let path = crate::config::config_path()?;
+    let mut ui = TerminalUi::new();
+    ui.print_top()?;
+
+    if path.exists() {
+        if !prompt_overwrite(&path, &mut io::stdin().lock(), &mut io::stdout())? {
+            println!("Config init cancelled.");
+            ui.print_bottom(TerminalStatus::Done)?;
+            return Ok(TerminalStatus::Done);
+        }
+
+        crate::config::write_default(&path)?;
+        println!("Overwritten config: {}", path.display());
+    } else {
+        crate::config::write_default(&path)?;
+        println!("Created config: {}", path.display());
+    }
+
+    ui.print_bottom(TerminalStatus::Done)?;
+    Ok(TerminalStatus::Done)
+}
+
+fn prompt_overwrite(
+    path: &Path,
+    reader: &mut impl BufRead,
+    writer: &mut impl Write,
+) -> io::Result<bool> {
+    if !io::stdin().is_terminal() {
+        return Err(io::Error::new(
+            io::ErrorKind::AlreadyExists,
+            format!("config already exists: {}", path.display()),
+        ));
+    }
+
+    read_overwrite_confirmation(path, reader, writer)
+}
+
+fn read_overwrite_confirmation(
+    path: &Path,
+    reader: &mut impl BufRead,
+    writer: &mut impl Write,
+) -> io::Result<bool> {
+    write!(
+        writer,
+        "Config already exists at {}. Overwrite? [y/n] ",
+        path.display()
+    )?;
+    writer.flush()?;
+
+    let mut answer = String::new();
+    reader.read_line(&mut answer)?;
+
+    let trimmed = answer.trim();
+    Ok(trimmed.eq_ignore_ascii_case("y") || trimmed.eq_ignore_ascii_case("yes"))
 }
 
 fn run_sources_with_terminal_ui(
@@ -241,7 +295,7 @@ Usage:
 
 Options:
   --help, -h      Show this help
-  --init-config   Create the user config file if it does not exist
+  --init-config   Create / overwrite the user config file
   --all, -a       Query all current sources, ignoring config defaults
   --codex-local   Query Codex from local session JSONL files
   --codex-cli     Query Codex through the Codex CLI
@@ -327,5 +381,43 @@ mod tests {
         let args = parse(&["--claude-hook"]);
 
         assert_eq!(args.sources, vec![Source::ClaudeHook]);
+    }
+
+    #[test]
+    fn confirm_overwrite_accepts_y_and_yes() {
+        assert!(read_overwrite_confirmation(
+            Path::new("/tmp/config.toml"),
+            &mut b"y\n".as_ref(),
+            &mut Vec::new()
+        )
+        .expect("y should confirm"));
+        assert!(read_overwrite_confirmation(
+            Path::new("/tmp/config.toml"),
+            &mut b"yes\n".as_ref(),
+            &mut Vec::new()
+        )
+        .expect("yes should confirm"));
+        assert!(read_overwrite_confirmation(
+            Path::new("/tmp/config.toml"),
+            &mut b"Y\n".as_ref(),
+            &mut Vec::new()
+        )
+        .expect("Y should confirm"));
+    }
+
+    #[test]
+    fn confirm_overwrite_rejects_empty_and_no() {
+        assert!(!read_overwrite_confirmation(
+            Path::new("/tmp/config.toml"),
+            &mut b"\n".as_ref(),
+            &mut Vec::new()
+        )
+        .expect("empty answer should decline"));
+        assert!(!read_overwrite_confirmation(
+            Path::new("/tmp/config.toml"),
+            &mut b"n\n".as_ref(),
+            &mut Vec::new()
+        )
+        .expect("n should decline"));
     }
 }
