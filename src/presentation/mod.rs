@@ -180,8 +180,31 @@ mod tests {
     fn limit_bar_uses_twenty_five_characters_without_color() {
         let bar = common::visible_limit_bar(54.0);
         assert_eq!(bar.chars().count(), 25);
-        assert!(bar.contains('■'));
-        assert!(bar.contains('◧'));
-        assert!(bar.contains('□'));
+        assert_eq!(bar.chars().filter(|character| *character == '■').count(), 14);
+        assert_eq!(bar.chars().filter(|character| *character == '□').count(), 11);
+        assert!(!bar.contains('◧'));
+    }
+
+    #[test]
+    fn limits_block_shows_one_decimal_place_for_fractional_percent() {
+        let mut info = sample_limits_info();
+        info.limits = vec![LimitInfo {
+            name: "plan_usage".to_string(),
+            window_label: Some("plan".to_string()),
+            used_percent: Some(37.5),
+            remaining_percent: Some(62.5),
+            resets_at: Some("Jul 3, 21:41 UTC-2".to_string()),
+            ..Default::default()
+        }];
+
+        let block = limits_block(&info, &ColorConfig { enabled: false });
+
+        assert!(block.body.contains("62.5% left"));
+    }
+
+    #[test]
+    fn format_percent_omits_trailing_zero() {
+        assert_eq!(common::format_percent(84.0), "84");
+        assert_eq!(common::format_percent(62.5), "62.5");
     }
 }

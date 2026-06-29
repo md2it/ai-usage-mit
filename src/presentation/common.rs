@@ -47,6 +47,15 @@ pub fn format_decimal(value: f64) -> String {
     }
 }
 
+pub fn normalize_percent(value: f64) -> f64 {
+    let clamped = value.clamp(0.0, 100.0);
+    (clamped * 10.0).round() / 10.0
+}
+
+pub fn format_percent(value: f64) -> String {
+    format_decimal(normalize_percent(value))
+}
+
 pub fn format_number(value: u64) -> String {
     let digits = value.to_string();
     let mut formatted = String::new();
@@ -143,20 +152,14 @@ pub fn render_limit_bar(remaining_percent: f64, color: &ColorConfig) -> String {
 
 pub fn visible_limit_bar(remaining_percent: f64) -> String {
     let clamped = remaining_percent.clamp(0.0, 100.0);
-    let total_units = 50;
-    let filled_units = ((clamped / 100.0) * total_units as f64).round() as usize;
-    let full_blocks = filled_units / 2;
-    let half_block = filled_units % 2 == 1;
+    let full_blocks = ((clamped / 100.0) * 25.0).round() as usize;
+    let full_blocks = full_blocks.min(25);
     let mut bar = String::with_capacity(25);
 
     for _ in 0..full_blocks {
         bar.push('■');
     }
-    if half_block {
-        bar.push('◧');
-    }
-    let empty_blocks = 25_usize.saturating_sub(full_blocks + usize::from(half_block));
-    for _ in 0..empty_blocks {
+    for _ in full_blocks..25 {
         bar.push('□');
     }
 
@@ -176,7 +179,7 @@ fn colorize_limit_bar(visible: &str, remaining_percent: f64, color: &ColorConfig
     let mut colored = String::new();
     let mut in_fill = false;
     for character in visible.chars() {
-        let is_filled = matches!(character, '■' | '◧');
+        let is_filled = character == '■';
         if is_filled && !in_fill {
             colored.push_str(color_code);
             in_fill = true;

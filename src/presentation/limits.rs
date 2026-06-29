@@ -1,8 +1,8 @@
 use crate::types::{LimitInfo, StructuredSourceInfo};
 
 use super::common::{
-    format_data_as_of, format_decimal, format_unavailable_block, provider_label,
-    render_limit_bar, window_label_for_display, ColorConfig, ProviderBlock,
+    format_data_as_of, format_decimal, format_percent, format_unavailable_block, normalize_percent,
+    provider_label, render_limit_bar, window_label_for_display, ColorConfig, ProviderBlock,
 };
 
 pub fn limits_block(info: &StructuredSourceInfo, color: &ColorConfig) -> ProviderBlock {
@@ -46,10 +46,11 @@ fn format_limit_row(limit: &LimitInfo, color: &ColorConfig) -> Option<String> {
             .used_percent
             .map(|used| (100.0 - used).clamp(0.0, 100.0))
     })?;
+    let remaining_display = normalize_percent(remaining_percent);
 
     let window = format!("{:<4}", window_label_for_display(limit));
-    let bar = render_limit_bar(remaining_percent, color);
-    let left = format!("{}% left", format_decimal(remaining_percent));
+    let bar = render_limit_bar(remaining_display, color);
+    let left = format!("{}% left", format_percent(remaining_percent));
     let reset = limit
         .resets_at
         .as_deref()

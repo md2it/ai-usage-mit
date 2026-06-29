@@ -139,12 +139,14 @@ Example:
             ---------- CODEX ----------
 
 5h   ■■□□□□□□□□□□□□□□□□□□□□□□□   8% left | reset Jun 30, 21:41 UTC-2
-7d   ■■■■■■■■■■■■■◧□□□□□□□□□□□  54% left | reset Jul 3, 21:41 UTC-2
+7d   ■■■■■■■■■■■■■■□□□□□□□□□  54% left | reset Jul 3, 21:41 UTC-2
 344.2 credits available
 Data as of: Jul 3, 21:41 UTC-2
 ```
 
-The bar width is `25` characters. One full bar character represents `4%`. A half or partial bar character may represent `2%`.
+The bar width is `25` characters. Each filled bar character `■` represents `4%`. Remaining limit is rounded to the nearest number of filled characters. Empty bar characters use `□`.
+
+The `{left}` percentage label is rounded to one decimal place. Whole values omit the fractional part (`8% left`, not `8.0% left`). Structured source data may keep finer precision; presentation normalizes the displayed value and uses the same normalized value for the bar and color thresholds.
 
 The filled bar characters show available remaining limit, not used limit. The whole filled part uses one color based on remaining limit. The empty bar characters are not colored.
 
