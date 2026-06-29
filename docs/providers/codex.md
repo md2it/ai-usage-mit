@@ -44,7 +44,7 @@ What is extracted:
 
 - events with `"type":"token_count"` and `"last_token_usage"`
 - totals: input, cached input, output, reasoning output, total
-- latest event timestamp
+- latest activity timestamp (ISO 8601 UTC from the latest `token_count` event with `rate_limits`)
 - `rate_limits` snapshot when present: `primary.used_percent`, `primary.window_minutes`, `primary.resets_at`, `secondary.used_percent`, `secondary.window_minutes`, `secondary.resets_at`, `credits`, `plan_type`
 
 How to get these fields from local files:
@@ -52,8 +52,8 @@ How to get these fields from local files:
 1. read `${CODEX_HOME:-~/.codex}/sessions/**/*.jsonl` and `${CODEX_HOME:-~/.codex}/archived_sessions/**/*.jsonl`
 2. keep only records where `type = "event_msg"` and `payload.type = "token_count"`
 3. for usage, aggregate `payload.info.last_token_usage.*`
-4. for limits/reset, read `payload.rate_limits.*` from the latest timestamped event
-5. convert `payload.rate_limits.*.resets_at` (unix seconds) into user timezone before showing
+4. for limits/reset, read `payload.rate_limits.*` from the latest timestamped event that includes `rate_limits`
+5. show `Latest activity` and `resets_at` as ISO 8601 UTC (`YYYY-MM-DDTHH:MM:SSZ`)
 
 Behavior:
 

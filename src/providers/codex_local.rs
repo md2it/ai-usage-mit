@@ -3,6 +3,7 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
+use chrono::{DateTime, Utc};
 use serde_json::Value;
 
 #[derive(Default)]
@@ -128,10 +129,11 @@ fn scan_file(path: &Path, usage: &mut CodexLocalUsage) -> io::Result<()> {
                 usage.latest_timestamp = Some(timestamp.clone());
             }
 
-            if usage
-                .latest_rate_limits_timestamp
-                .as_ref()
-                .is_none_or(|latest| timestamp > *latest)
+            if event.rate_limits.is_some()
+                && usage
+                    .latest_rate_limits_timestamp
+                    .as_ref()
+                    .is_none_or(|latest| timestamp > *latest)
             {
                 usage.latest_rate_limits_timestamp = Some(timestamp);
                 usage.latest_rate_limits = event.rate_limits;
@@ -256,12 +258,12 @@ fn format_summary(root: &Path, usage: &CodexLocalUsage) -> String {
         format_number(usage.totals.output_tokens),
         format_number(usage.totals.reasoning_output_tokens)
     ));
-
-    if let Some(timestamp) = &usage.latest_timestamp {
-        summary.push_str(&format!("latest event: {timestamp}\n"));
-    }
+    summary.push('\n');
 
     if let Some(rate_limits) = &usage.latest_rate_limits {
+        if let Some(timestamp) = &usage.latest_rate_limits_timestamp {
+            summary.push_str(&format!("Latest activity: {timestamp}\n"));
+        }
         summary.push_str("limits:\n");
         summary.push_str(&format_rate_limit_window("primary", &rate_limits.primary));
         summary.push_str(&format_rate_limit_window(
@@ -276,6 +278,9 @@ fn format_summary(root: &Path, usage: &CodexLocalUsage) -> String {
             summary.push_str(&format!("plan: {plan_type}\n"));
         }
     } else {
+        if let Some(timestamp) = &usage.latest_timestamp {
+            summary.push_str(&format!("Latest activity: {timestamp}\n"));
+        }
         summary.push_str("limits/reset: unavailable in local Codex JSONL\n");
     }
 
@@ -297,7 +302,7 @@ fn format_rate_limit_window(label: &str, value: &Option<RateLimitWindow>) -> Str
         details.push(format!("window {}", format_window(window_minutes)));
     }
     if let Some(resets_at) = value.resets_at {
-        details.push(format!("resets at {resets_at} (unix)"));
+        details.push(format!("resets {}", format_unix_utc(resets_at)));
     }
 
     if details.is_empty() {
@@ -313,6 +318,12 @@ fn format_window(minutes: u64) -> String {
         10080 => "weekly (10080m)".to_string(),
         _ => format!("{minutes}m"),
     }
+}
+
+fn format_unix_utc(seconds: u64) -> String {
+    DateTime::<Utc>::from_timestamp(seconds as i64, 0)
+        .map(|value| value.format("%Y-%m-%dT%H:%M:%SZ").to_string())
+        .unwrap_or_else(|| format!("{seconds} (unix)"))
 }
 
 fn format_decimal(value: f64) -> String {
@@ -375,18 +386,19 @@ mod tests {
         );
 
         assert!(summary.contains("limits:"));
+        assert!(summary.contains("Latest activity: 2026-06-28T11:00:00Z"));
         assert!(
-            summary.contains("primary: used 45%, window 5h (300m), resets at 1750003600 (unix)")
+            summary.contains("primary: used 45%, window 5h (300m), resets 2025-06-15T16:06:40Z")
         );
         assert!(summary.contains(
-            "secondary: used 71.9%, window weekly (10080m), resets at 1750600000 (unix)"
+            "secondary: used 71.9%, window weekly (10080m), resets 2025-06-22T13:46:40Z"
         ));
         assert!(summary.contains("credits: 123.6"));
         assert!(summary.contains("plan: pro"));
     }
 
     #[test]
-    fn marks_limits_unavailable_when_latest_timestamp_has_no_rate_limits() {
+    fn keeps_limits_when_latest_event_has_no_rate_limits() {
         let path = env::temp_dir().join(format!(
             "ai-usage-codex-local-{}-2.jsonl",
             std::process::id()
@@ -409,7 +421,10 @@ mod tests {
             Some("2026-06-28T12:00:00Z")
         );
         assert!(summary.contains("token events: 2"));
-        assert!(summary.contains("limits/reset: unavailable in local Codex JSONL"));
+        assert!(summary.contains("Latest activity: 2026-06-28T10:00:00Z"));
+        assert!(summary.contains(
+            "primary: used 10%, window 5h (300m), resets 2025-06-15T15:06:40Z"
+        ));
     }
 
     #[test]
@@ -437,10 +452,17 @@ mod tests {
             usage.latest_timestamp.as_deref(),
             Some("2026-06-29T02:24:02.237Z")
         );
-        assert!(summary.contains("primary: used 100%, window 5h (300m), resets at 1782709162 (unix)"));
+        assert!(summary.contains("Latest activity: 2026-06-29T02:24:02.237Z"));
+        assert!(summary.contains("primary: used 100%, window 5h (300m), resets 2026-06-29T04:59:22Z"));
         assert!(summary.contains(
-            "secondary: used 16%, window weekly (10080m), resets at 1783295962 (unix)"
+            "secondary: used 16%, window weekly (10080m), resets 2026-07-05T23:59:22Z"
         ));
+    }
+
+    #[test]
+    fn formats_unix_seconds_as_utc_rfc3339() {
+        assert_eq!(format_unix_utc(1_782_709_162), "2026-06-29T04:59:22Z");
+        assert_eq!(format_unix_utc(1_750_003_600), "2025-06-15T16:06:40Z");
     }
 
     #[test]
