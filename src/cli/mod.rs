@@ -50,9 +50,15 @@ fn run_cli() -> io::Result<TerminalStatus> {
         return Ok(status);
     }
 
+    let output_mode = args.output_mode;
     let sources = select_sources(args)?;
     let mut ui = TerminalUi::new();
     ui.print_top()?;
+    // TODO: route OutputMode::Raw and OutputMode::Structured to real source-level outputs.
+    // For now both modes use the existing provider summary path while the provider contract is implemented.
+    match output_mode {
+        OutputMode::Raw | OutputMode::Structured => {}
+    }
     let status = run_sources_with_terminal_ui(&mut ui, &sources)?;
     ui.print_bottom(status)?;
 
@@ -234,7 +240,14 @@ struct CliArgs {
     help: bool,
     init_config: bool,
     all: bool,
+    output_mode: OutputMode,
     sources: Vec<Source>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum OutputMode {
+    Raw,
+    Structured,
 }
 
 fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
@@ -242,9 +255,11 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
         help: false,
         init_config: false,
         all: false,
+        output_mode: OutputMode::Structured,
         sources: Vec::new(),
     };
     let mut args = args.peekable();
+    let mut output_mode = None;
 
     while let Some(arg) = args.next() {
         match arg.as_str() {
@@ -256,6 +271,24 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
             }
             "-a" | "--all" => {
                 parsed.all = true;
+            }
+            "-r" | "--raw" => {
+                if output_mode.is_some() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "--raw cannot be combined with --structured",
+                    ));
+                }
+                output_mode = Some(OutputMode::Raw);
+            }
+            "-s" | "--structured" => {
+                if output_mode.is_some() {
+                    return Err(io::Error::new(
+                        io::ErrorKind::InvalidInput,
+                        "--structured cannot be combined with --raw",
+                    ));
+                }
+                output_mode = Some(OutputMode::Structured);
             }
             "--codex-local" => {
                 parsed.sources.push(Source::CodexLocal);
@@ -284,6 +317,10 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
         }
     }
 
+    if let Some(output_mode) = output_mode {
+        parsed.output_mode = output_mode;
+    }
+
     Ok(parsed)
 }
 
@@ -294,15 +331,31 @@ Usage:
   ai-usage [OPTIONS]
 
 Options:
-  --help, -h      Show this help
-  --init-config   Create / overwrite the user config file
-  --all, -a       Query all current sources, ignoring config defaults
-  --codex-local   Query Codex from local session JSONL files
-  --codex-cli     Query Codex through the Codex CLI
-  --claude-hook   Query Claude from statusline hook stdin payload
-  --claude-cli    Query Claude through the Claude CLI
-  --claude-local  Query Claude from local transcript JSONL files
-  --cursor-api2   Query Cursor through api2.cursor.sh
+  --help, -h       Show this help
+  --init-config    Create / overwrite the user config file
+  --all, -a        Query all current sources, ignoring config defaults
+  --raw, -r        Return raw source data
+  --structured, -s Return structured source data
+
+Technical source options:
+  --codex-local    Query Codex from local session JSONL files
+  --codex-cli      Query Codex through the Codex CLI
+  --claude-hook    Query Claude from statusline hook stdin payload
+  --claude-cli     Query Claude through the Claude CLI
+  --claude-local   Query Claude from local transcript JSONL files
+  --cursor-api2    Query Cursor through api2.cursor.sh
+
+Output:
+  default          Structured source data
+  --raw, -r        Data as received or extracted from each source
+  --structured, -s Data converted to the common structured format
+
+Examples:
+  ai-usage --all
+  ai-usage --all -r
+  ai-usage --all --structured
+  ai-usage --codex-cli --raw
+  ai-usage --cursor-api2 -s
 
 Config:
   ~/.config/ai-usage/config.toml
@@ -381,6 +434,27 @@ mod tests {
         let args = parse(&["--claude-hook"]);
 
         assert_eq!(args.sources, vec![Source::ClaudeHook]);
+    }
+
+    #[test]
+    fn structured_output_is_default() {
+        let args = parse(&[]);
+
+        assert_eq!(args.output_mode, OutputMode::Structured);
+    }
+
+    #[test]
+    fn supports_raw_and_structured_output_flags() {
+        assert_eq!(parse(&["--raw"]).output_mode, OutputMode::Raw);
+        assert_eq!(parse(&["-r"]).output_mode, OutputMode::Raw);
+        assert_eq!(parse(&["--structured"]).output_mode, OutputMode::Structured);
+        assert_eq!(parse(&["-s"]).output_mode, OutputMode::Structured);
+    }
+
+    #[test]
+    fn rejects_combined_raw_and_structured_output_flags() {
+        assert!(parse_args(["--raw", "--structured"].into_iter().map(String::from)).is_err());
+        assert!(parse_args(["-s", "-r"].into_iter().map(String::from)).is_err());
     }
 
     #[test]

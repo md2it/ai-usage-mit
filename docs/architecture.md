@@ -55,6 +55,7 @@ Module rules:
 - `get_limits.rs` does not run processes or HTTP directly when that can be delegated to provider/infra
 - `providers/` does not format terminal output
 - `providers/` returns normalized types from `types.rs`
+- `providers/` follows [get-info/providers/README.md](get-info/providers/README.md)
 - `infra/` does not know the business meaning of usage/limits
 - `infra/` is responsible only for technical interaction with the outside world
 - `types.rs` must not depend on CLI, desktop, the file system, or external commands

@@ -4,7 +4,65 @@ This document describes the actual terminal interface of `ai-usage`.
 
 ---
 
-## General Format
+## Help
+
+`ai-usage --help` uses the common frame.
+
+Format:
+
+```text
+
+=-=-=-=-=-=-=-=-=-=-=-=-= AI USAGE =-=-=-=-=-=-=-=-=-=-=-=-=
+
+Usage:
+  ai-usage [OPTIONS]
+
+Options:
+  --help, -h       Show this help
+  --init-config    Create / overwrite the user config file
+  --all, -a        Query all current sources, ignoring config defaults
+  --raw, -r        Return raw source data
+  --structured, -s Return structured source data
+
+Technical source options:
+  --codex-local    Query Codex from local session JSONL files
+  --codex-cli      Query Codex through the Codex CLI
+  --claude-hook    Query Claude from statusline hook stdin payload
+  --claude-cli     Query Claude through the Claude CLI
+  --claude-local   Query Claude from local transcript JSONL files
+  --cursor-api2    Query Cursor through api2.cursor.sh
+
+Output:
+  default          Structured source data
+  --raw, -r        Data as received or extracted from each source
+  --structured, -s Data converted to the common structured format
+
+Examples:
+  ai-usage --all
+  ai-usage --all -r
+  ai-usage --all --structured
+  ai-usage --codex-cli --raw
+  ai-usage --cursor-api2 -s
+
+Config:
+  ~/.config/ai-usage/config.toml
+
+  default_sources = ["codex_local", "claude_hook", "cursor_api2"]
+
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-= DONE =-=-=-=-=-=-=-=-=-=-=-=-=-=
+
+```
+
+`--raw` and `--structured` are technical output modes for source-level data. They support development, testing, and the future presentation layer. The final user-facing output may become a separate mode later.
+
+Technical source options are working source selectors, but they are primarily intended for intermediate source-level workflows. The recommended user-facing workflow may be provided by the future presentation layer.
+
+---
+
+## UI
+
+### General Format
 
 Each `ai-usage` response is printed inside a common frame.
 
@@ -34,43 +92,7 @@ Statuses:
 
 ---
 
-## Help
-
-`ai-usage --help` uses the common frame.
-
-Format:
-
-```text
-
-=-=-=-=-=-=-=-=-=-=-=-=-= AI USAGE =-=-=-=-=-=-=-=-=-=-=-=-=
-
-Usage:
-  ai-usage [OPTIONS]
-
-Options:
-  --help, -h      Show this help
-  --init-config   Create / overwrite the user config file
-  --all, -a       Query all current sources, ignoring config defaults
-  --codex-local   Query Codex from local session JSONL files
-  --codex-cli     Query Codex through the Codex CLI
-  --claude-hook   Query Claude from statusline hook stdin payload
-  --claude-cli    Query Claude through the Claude CLI
-  --claude-local  Query Claude from local transcript JSONL files
-  --cursor-api2   Query Cursor through api2.cursor.sh
-
-Config:
-  ~/.config/ai-usage/config.toml
-
-  default_sources = ["codex_local", "claude_hook", "cursor_api2"]
-
-
-=-=-=-=-=-=-=-=-=-=-=-=-=-= DONE =-=-=-=-=-=-=-=-=-=-=-=-=-=
-
-```
-
----
-
-## CLI Errors
+### CLI Errors
 
 CLI errors are printed inside the common frame.
 
@@ -88,7 +110,7 @@ ai-usage: unknown argument `--bad`
 
 ---
 
-## Source Block
+### Source Block
 
 Each completed source is printed as a separate block.
 
@@ -114,7 +136,7 @@ Cursor api2 usage unavailable: token not found; run `cursor agent login`
 
 ---
 
-## Loader
+### Loader
 
 The loader shows active work for a source and does not show a progress percentage.
 
@@ -147,6 +169,30 @@ After a source finishes, the loader is cleared, then the source result block is 
 
 ---
 
+### Color
+
+Terminal UI does not use color.
+
+Output does not contain ANSI color codes for frames, headers, the loader, or content.
+
+---
+
+### Loader Cleanup
+
+In an interactive terminal, the loader is redrawn in place.
+
+On each update:
+
+1. previous loader lines are cleared;
+2. current loader lines are printed again;
+3. the cursor stays in the loader area.
+
+When a source finishes, the loader is cleared before the result is printed.
+
+When `TerminalUi` shuts down, the loader is cleared via `Drop`.
+
+---
+
 ## Parallel Model
 
 Selected sources are started in parallel.
@@ -173,30 +219,6 @@ Format:
 ```
 
 When a source finishes, its loader is cleared and the result is printed as soon as it is ready.
-
----
-
-## Color
-
-Terminal UI does not use color.
-
-Output does not contain ANSI color codes for frames, headers, the loader, or content.
-
----
-
-## Loader Cleanup
-
-In an interactive terminal, the loader is redrawn in place.
-
-On each update:
-
-1. previous loader lines are cleared;
-2. current loader lines are printed again;
-3. the cursor stays in the loader area.
-
-When a source finishes, the loader is cleared before the result is printed.
-
-When `TerminalUi` shuts down, the loader is cleared via `Drop`.
 
 ---
 

@@ -52,11 +52,11 @@ Notifications and hard blocking are part of the target product scope, but their 
 
 The product flow can be described as a business-readable technical process:
 
-1. Get data from information sources
+1. [docs/get-info](get-info/)
 
-   The system works with a defined set of information sources. Each source can have its own request format, access method, data location, limitations, fallback paths, and reliability constraints. The catalog of these source-specific approaches is maintained in [docs/get-info](get-info/).
+   The system works with a defined set of information sources. Each source can have its own request format, access method, data location, limitations, fallback paths, and reliability constraints.
 
-2. Convert raw data into structured information
+2. [docs/structured-info](structured-info.md)
 
    The system processes the raw information received from each source and extracts normalized, structured data from it. This structured data should represent business-relevant facts such as available limits, used volume, reset periods, account context, provider context, and access status.
 
