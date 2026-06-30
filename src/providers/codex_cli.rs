@@ -41,14 +41,14 @@ pub fn build_structured(raw: &str) -> StructuredSourceInfo {
 
         if normalized.starts_with("5h limit:") {
             if let Some(limit) = parse_limit_line("5h limit", "5h", 300, &normalized) {
-                limits.push(limit);
+                upsert_limit(&mut limits, limit);
                 found_data = true;
             } else {
                 diagnostics.push("could not parse 5h limit line".to_string());
             }
         } else if normalized.starts_with("Weekly limit:") {
             if let Some(limit) = parse_limit_line("Weekly limit", "weekly", 10080, &normalized) {
-                limits.push(limit);
+                upsert_limit(&mut limits, limit);
                 found_data = true;
             } else {
                 diagnostics.push("could not parse weekly limit line".to_string());
@@ -67,10 +67,7 @@ pub fn build_structured(raw: &str) -> StructuredSourceInfo {
     let (data_available, message) = if found_data {
         (true, None)
     } else if raw.trim().is_empty() {
-        (
-            false,
-            Some("Codex CLI returned empty output".to_string()),
-        )
+        (false, Some("Codex CLI returned empty output".to_string()))
     } else {
         (
             false,
@@ -78,9 +75,7 @@ pub fn build_structured(raw: &str) -> StructuredSourceInfo {
         )
     };
     let collected_at = Some(Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string());
-    let data_as_of = data_available
-        .then(|| collected_at.clone())
-        .flatten();
+    let data_as_of = data_available.then(|| collected_at.clone()).flatten();
 
     StructuredSourceInfo {
         provider: PROVIDER.to_string(),
@@ -151,6 +146,17 @@ fn parse_resets_at(line: &str) -> Option<String> {
 fn parse_credits_line(line: &str) -> Option<f64> {
     let after_prefix = line.strip_prefix("Credits:")?.trim();
     after_prefix.split_whitespace().next()?.parse().ok()
+}
+
+fn upsert_limit(limits: &mut Vec<LimitInfo>, limit: LimitInfo) {
+    if let Some(index) = limits
+        .iter()
+        .position(|existing| existing.name == limit.name)
+    {
+        limits[index] = limit;
+    } else {
+        limits.push(limit);
+    }
 }
 
 fn strip_progress_bar(line: &str) -> String {
@@ -269,10 +275,7 @@ Credits: 335 credits
         assert_eq!(weekly.window_minutes, Some(10080));
         assert_eq!(weekly.remaining_percent, Some(84.0));
         assert_eq!(weekly.used_percent, Some(16.0));
-        assert_eq!(
-            weekly.resets_at.as_deref(),
-            Some("02:59 on 6 Jul")
-        );
+        assert_eq!(weekly.resets_at.as_deref(), Some("02:59 on 6 Jul"));
     }
 
     #[test]
@@ -306,16 +309,44 @@ Credits: 335 credits
     }
 
     #[test]
+    fn build_structured_deduplicates_repeated_limit_lines() {
+        let output = "\
+5h limit: [████░░░░░░░░░░░░░░░░] 35% left (resets 03:48)
+Weekly limit: [████████████░░░░░░░░] 59% left (resets 02:59 on 6 Jul)
+5h limit: [████░░░░░░░░░░░░░░░░] 35% left (resets 03:48)
+Weekly limit: [████████████░░░░░░░░] 59% left (resets 02:59 on 6 Jul)
+Credits: 301 credits
+";
+        let info = build_structured(output);
+
+        assert_eq!(info.limits.len(), 2);
+        assert_eq!(info.limits[0].name, "5h limit");
+        assert_eq!(info.limits[1].name, "Weekly limit");
+        assert_eq!(info.account.credits_remaining, Some(301.0));
+    }
+
+    #[test]
+    fn build_structured_keeps_latest_duplicate_limit_values() {
+        let output = "\
+5h limit: 10% left (resets 07:59)
+5h limit: 35% left (resets 03:48)
+";
+        let info = build_structured(output);
+
+        assert_eq!(info.limits.len(), 1);
+        assert_eq!(info.limits[0].remaining_percent, Some(35.0));
+    }
+
+    #[test]
     fn build_structured_adds_diagnostics_for_unparseable_limit_line() {
         let info = build_structured("5h limit: unavailable\nCredits: 10 credits\n");
 
         assert!(info.status.data_available);
         assert_eq!(info.limits.len(), 0);
         assert_eq!(info.account.credits_remaining, Some(10.0));
-        assert!(
-            info.diagnostics
-                .iter()
-                .any(|entry| entry.contains("5h limit"))
-        );
+        assert!(info
+            .diagnostics
+            .iter()
+            .any(|entry| entry.contains("5h limit")));
     }
 }

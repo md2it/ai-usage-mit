@@ -33,12 +33,9 @@ pub fn format_user_timestamp(value: &str, context: &TimeContext) -> String {
 }
 
 pub fn format_local_datetime(dt: DateTime<Local>) -> String {
-    let month = MONTHS
-        .get(dt.month0() as usize)
-        .copied()
-        .unwrap_or("???");
+    let month = MONTHS.get(dt.month0() as usize).copied().unwrap_or("???");
     format!(
-        "{} {}, {} {}",
+        "{} {:2}, {} {}",
         month,
         dt.day(),
         dt.format("%H:%M"),
@@ -117,7 +114,11 @@ fn split_timezone_suffix(value: &str) -> (&str, Option<Tz>) {
     (body, name.parse::<Tz>().ok())
 }
 
-fn parse_source_specific(body: &str, timezone: Option<Tz>, context: &TimeContext) -> Option<DateTime<Local>> {
+fn parse_source_specific(
+    body: &str,
+    timezone: Option<Tz>,
+    context: &TimeContext,
+) -> Option<DateTime<Local>> {
     if let Some(parsed) = parse_on_date_format(body, timezone, context) {
         return Some(parsed);
     }
@@ -131,21 +132,33 @@ fn parse_source_specific(body: &str, timezone: Option<Tz>, context: &TimeContext
     None
 }
 
-fn parse_on_date_format(body: &str, timezone: Option<Tz>, context: &TimeContext) -> Option<DateTime<Local>> {
+fn parse_on_date_format(
+    body: &str,
+    timezone: Option<Tz>,
+    context: &TimeContext,
+) -> Option<DateTime<Local>> {
     let (time_part, date_part) = body.split_once(" on ")?;
     let date = parse_day_month(date_part.trim(), context.reference.year())?;
     let time = parse_clock_time(time_part.trim())?;
     assemble_local_datetime(date, time, timezone, context, DateRollPolicy::YearIfPast)
 }
 
-fn parse_month_day_at_time(body: &str, timezone: Option<Tz>, context: &TimeContext) -> Option<DateTime<Local>> {
+fn parse_month_day_at_time(
+    body: &str,
+    timezone: Option<Tz>,
+    context: &TimeContext,
+) -> Option<DateTime<Local>> {
     let (date_part, time_part) = body.split_once(" at ")?;
     let date = parse_month_day(date_part.trim(), context.reference.year())?;
     let time = parse_clock_time(time_part.trim())?;
     assemble_local_datetime(date, time, timezone, context, DateRollPolicy::YearIfPast)
 }
 
-fn parse_time_only(body: &str, timezone: Option<Tz>, context: &TimeContext) -> Option<DateTime<Local>> {
+fn parse_time_only(
+    body: &str,
+    timezone: Option<Tz>,
+    context: &TimeContext,
+) -> Option<DateTime<Local>> {
     let time = parse_clock_time(body)?;
     assemble_local_datetime(
         context.reference.date_naive(),
@@ -185,7 +198,11 @@ fn assemble_local_datetime(
     Some(local)
 }
 
-fn localize_naive(date: NaiveDate, time: NaiveTime, timezone: Option<Tz>) -> Option<DateTime<Local>> {
+fn localize_naive(
+    date: NaiveDate,
+    time: NaiveTime,
+    timezone: Option<Tz>,
+) -> Option<DateTime<Local>> {
     let naive = NaiveDateTime::new(date, time);
     if let Some(timezone) = timezone {
         return timezone
@@ -256,7 +273,11 @@ fn parse_clock_time(value: &str) -> Option<NaiveTime> {
 
     let hour = if is_12h {
         if pm {
-            if hour == 12 { 12 } else { hour + 12 }
+            if hour == 12 {
+                12
+            } else {
+                hour + 12
+            }
         } else if hour == 12 {
             0
         } else {
@@ -319,7 +340,7 @@ mod tests {
         let context = fixed_context("2026-06-29T20:00:00Z");
         let formatted = format_user_timestamp("02:59 on 6 Jul", &context);
 
-        assert!(formatted.starts_with("Jul 6, "));
+        assert!(formatted.starts_with("Jul  6, "));
         assert!(formatted.contains("02:59"));
         assert!(formatted.contains("UTC"));
     }
@@ -329,5 +350,19 @@ mod tests {
         assert_eq!(format_utc_offset(7200), "UTC+2");
         assert_eq!(format_utc_offset(19_800), "UTC+5:30");
         assert_eq!(format_utc_offset(-18_000), "UTC-5");
+    }
+
+    #[test]
+    fn formatted_timestamps_align_clock_time_after_comma() {
+        let context = fixed_context("2026-06-29T20:00:00Z");
+        let single_digit_day = format_user_timestamp("02:59 on 6 Jul", &context);
+        let double_digit_day = format_user_timestamp("Jun 30 at 1pm (Asia/Nicosia)", &context);
+
+        fn time_start(value: &str) -> usize {
+            value.find(", ").expect("comma") + 2
+        }
+
+        assert_eq!(time_start(&single_digit_day), time_start(&double_digit_day));
+        assert!(single_digit_day.contains("Jul  6, "));
     }
 }
