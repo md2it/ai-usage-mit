@@ -4,17 +4,19 @@ use std::fs::{self, File};
 use std::io::{self, BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
-use chrono::Utc;
+use chrono::{DateTime, Duration, Timelike, Utc};
 use serde_json::{json, Value};
 
 use crate::types::{
-    AccountInfo, ActivityUsage, ModelUsage, MoneyUsage, SourceData, SourceStatus,
+    AccountInfo, ActivityUsage, LimitInfo, ModelUsage, MoneyUsage, SourceData, SourceStatus,
     StructuredSourceInfo, TokenUsage, UsageInfo,
 };
 
 const PROVIDER: &str = "claude";
 const SOURCE: &str = "claude_local";
 const SOURCE_LINK: &str = "docs/get-info";
+const CLAUDE_LOCAL_MAX5_TOKEN_LIMIT: u64 = 88_000;
+const CLAUDE_LOCAL_SESSION_WINDOW_MINUTES: u64 = 5 * 60;
 
 #[derive(Default)]
 struct ClaudeLocalUsage {
@@ -27,6 +29,7 @@ struct ClaudeLocalUsage {
     cache_creation_tokens: u64,
     latest_timestamp: Option<String>,
     models: HashMap<String, u64>,
+    turns_by_time: Vec<TurnUsage>,
 }
 
 pub fn collect() -> io::Result<SourceData> {
@@ -140,31 +143,34 @@ fn scan_jsonl_file(path: &Path, usage: &mut ClaudeLocalUsage) -> io::Result<()> 
     }
 
     for turn in seen_messages.into_values().chain(turns_without_id) {
-        usage.sessions.insert(turn.session_id);
+        usage.sessions.insert(turn.session_id.clone());
         usage.turns += 1;
         usage.input_tokens += turn.input_tokens;
         usage.output_tokens += turn.output_tokens;
         usage.cache_read_tokens += turn.cache_read_tokens;
         usage.cache_creation_tokens += turn.cache_creation_tokens;
 
-        if let Some(model) = turn.model.filter(|value| !value.is_empty()) {
-            *usage.models.entry(model).or_default() += 1;
+        if let Some(model) = turn.model.as_ref().filter(|value| !value.is_empty()) {
+            *usage.models.entry(model.clone()).or_default() += 1;
         }
 
-        if let Some(timestamp) = turn.timestamp.filter(|value| !value.is_empty()) {
+        if let Some(timestamp) = turn.timestamp.as_ref().filter(|value| !value.is_empty()) {
             if usage
                 .latest_timestamp
                 .as_ref()
-                .is_none_or(|current| timestamp > *current)
+                .is_none_or(|current| timestamp > current)
             {
-                usage.latest_timestamp = Some(timestamp);
+                usage.latest_timestamp = Some(timestamp.clone());
             }
         }
+
+        usage.turns_by_time.push(turn);
     }
 
     Ok(())
 }
 
+#[derive(Clone)]
 struct TurnUsage {
     session_id: String,
     timestamp: Option<String>,
@@ -174,6 +180,12 @@ struct TurnUsage {
     output_tokens: u64,
     cache_read_tokens: u64,
     cache_creation_tokens: u64,
+}
+
+struct ActiveSessionLimit {
+    resets_at: DateTime<Utc>,
+    used_tokens: u64,
+    token_limit: u64,
 }
 
 fn extract_turn_usage(record: &Value) -> Option<TurnUsage> {
@@ -254,7 +266,8 @@ fn encode_raw(
         });
     }
 
-    serde_json::to_string(&payload).map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
+    serde_json::to_string(&payload)
+        .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))
 }
 
 fn path_strings(paths: &[PathBuf]) -> Vec<String> {
@@ -315,12 +328,18 @@ fn structured_from_usage(usage: &ClaudeLocalUsage) -> StructuredSourceInfo {
         + usage.output_tokens
         + usage.cache_read_tokens
         + usage.cache_creation_tokens;
+    let active_session_limit = active_session_limit(usage, Utc::now());
     let mut diagnostics = vec![
+        "5h limit is a local estimate from transcript input+output tokens".to_string(),
+        "5h local estimate uses Claude Max5 token limit: 88,000".to_string(),
         "official remaining limit/reset unavailable in local transcripts".to_string(),
     ];
     let data_as_of = usage.latest_timestamp.clone();
     if data_as_of.is_none() {
         diagnostics.push("latest transcript record timestamp is unavailable".to_string());
+    }
+    if active_session_limit.is_none() {
+        diagnostics.push("no active 5h local transcript window found".to_string());
     }
 
     StructuredSourceInfo {
@@ -336,7 +355,11 @@ fn structured_from_usage(usage: &ClaudeLocalUsage) -> StructuredSourceInfo {
         collected_at: Some(Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string()),
         data_as_of,
         account: AccountInfo::default(),
-        limits: Vec::new(),
+        limits: active_session_limit
+            .as_ref()
+            .map(limit_info_from_active_session)
+            .into_iter()
+            .collect(),
         usage: UsageInfo {
             tokens: TokenUsage {
                 input: Some(usage.input_tokens),
@@ -361,6 +384,88 @@ fn structured_from_usage(usage: &ClaudeLocalUsage) -> StructuredSourceInfo {
         },
         diagnostics,
     }
+}
+
+fn active_session_limit(
+    usage: &ClaudeLocalUsage,
+    now: DateTime<Utc>,
+) -> Option<ActiveSessionLimit> {
+    let mut turns = usage
+        .turns_by_time
+        .iter()
+        .filter_map(|turn| {
+            let timestamp = turn.timestamp.as_deref().and_then(parse_timestamp)?;
+            Some((timestamp, turn))
+        })
+        .collect::<Vec<_>>();
+    turns.sort_by_key(|(timestamp, _)| *timestamp);
+
+    let mut current: Option<ActiveSessionLimit> = None;
+    let mut previous_timestamp: Option<DateTime<Utc>> = None;
+    let session_duration = Duration::minutes(CLAUDE_LOCAL_SESSION_WINDOW_MINUTES as i64);
+
+    for (timestamp, turn) in turns {
+        let should_start_new = current
+            .as_ref()
+            .is_none_or(|block| timestamp >= block.resets_at)
+            || previous_timestamp.is_some_and(|previous| timestamp - previous >= session_duration);
+
+        if should_start_new {
+            let start_at = round_down_to_hour(timestamp);
+            current = Some(ActiveSessionLimit {
+                resets_at: start_at + session_duration,
+                used_tokens: 0,
+                token_limit: CLAUDE_LOCAL_MAX5_TOKEN_LIMIT,
+            });
+        }
+
+        if let Some(block) = current.as_mut() {
+            block.used_tokens += turn.input_tokens + turn.output_tokens;
+        }
+        previous_timestamp = Some(timestamp);
+    }
+
+    current.filter(|block| block.resets_at > now)
+}
+
+fn limit_info_from_active_session(session: &ActiveSessionLimit) -> LimitInfo {
+    let used_percent = if session.token_limit > 0 {
+        (session.used_tokens as f64 / session.token_limit as f64) * 100.0
+    } else {
+        0.0
+    };
+    let remaining_amount = session.token_limit.saturating_sub(session.used_tokens);
+
+    LimitInfo {
+        name: "5h local estimate".to_string(),
+        window_label: Some("5h".to_string()),
+        window_minutes: Some(CLAUDE_LOCAL_SESSION_WINDOW_MINUTES),
+        resets_at: Some(
+            session
+                .resets_at
+                .to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+        ),
+        used_percent: Some((used_percent * 10.0).round() / 10.0),
+        remaining_percent: Some(((100.0 - used_percent).clamp(0.0, 100.0) * 10.0).round() / 10.0),
+        used_amount: Some(session.used_tokens as f64),
+        remaining_amount: Some(remaining_amount as f64),
+        total_amount: Some(session.token_limit as f64),
+        amount_unit: Some("tokens".to_string()),
+    }
+}
+
+fn parse_timestamp(value: &str) -> Option<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(value)
+        .map(|timestamp| timestamp.with_timezone(&Utc))
+        .ok()
+}
+
+fn round_down_to_hour(timestamp: DateTime<Utc>) -> DateTime<Utc> {
+    timestamp
+        .with_minute(0)
+        .and_then(|value| value.with_second(0))
+        .and_then(|value| value.with_nanosecond(0))
+        .unwrap_or(timestamp)
 }
 
 fn top_model(models: &HashMap<String, u64>) -> Option<&str> {
