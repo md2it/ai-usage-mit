@@ -35,11 +35,7 @@ pub fn format_data_as_of(info: &StructuredSourceInfo) -> String {
 }
 
 pub fn format_unavailable_block(info: &StructuredSourceInfo) -> String {
-    let message = info
-        .status
-        .message
-        .as_deref()
-        .unwrap_or("unavailable");
+    let message = info.status.message.as_deref().unwrap_or("unavailable");
     format!("Unavailable: {message}\n{}", format_data_as_of(info))
 }
 
@@ -58,7 +54,7 @@ pub fn normalize_percent(value: f64) -> f64 {
 }
 
 pub fn format_percent(value: f64) -> String {
-    format_decimal(normalize_percent(value))
+    format!("{:.1}", normalize_percent(value))
 }
 
 pub fn format_number(value: u64) -> String {
@@ -105,9 +101,7 @@ fn compact_window_label(label: &str) -> String {
             "5h".to_string()
         }
         "7d" | "7-day window" | "7 day" | "seven_day" | "weekly" | "secondary window"
-        | "current week" => {
-            "7d".to_string()
-        }
+        | "current week" => "7d".to_string(),
         _ if normalized.contains("5") && normalized.contains("hour") => "5h".to_string(),
         _ if normalized.contains("7") && normalized.contains("day") => "7d".to_string(),
         _ if normalized.contains("week") => "7d".to_string(),

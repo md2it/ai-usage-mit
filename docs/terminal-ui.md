@@ -138,8 +138,8 @@ Example:
 ```text
             ---------- CODEX ----------
 
-5h   ■■□□□□□□□□□□□□□□□□□□□□□□□   8% left | reset Jun 30, 21:41 UTC-2
-7d   ■■■■■■■■■■■■■■□□□□□□□□□  54% left | reset Jul 3, 21:41 UTC-2
+5h   ■■□□□□□□□□□□□□□□□□□□□□□□□  8.0% left | reset Jun 30, 21:41 UTC-2
+7d   ■■■■■■■■■■■■■■□□□□□□□□□ 54.0% left | reset Jul  3, 21:41 UTC-2
 344.2 credits available
 Data as of: Jul 3, 21:41 UTC-2
 ```
@@ -148,7 +148,7 @@ The bar width is `25` characters. Each filled bar character `■` represents `4%
 
 Limit rows use fixed visible column widths: `{window}` is 4 characters, `{bar}` is 25 characters, and `{left}` is 11 characters right-aligned. The ` | reset ` separator starts at the same column on every row.
 
-The `{left}` percentage label is rounded to one decimal place. Whole values omit the fractional part (`8% left`, not `8.0% left`). Structured source data may keep finer precision; presentation normalizes the displayed value and uses the same normalized value for the bar and color thresholds.
+The `{left}` percentage label is always shown with one decimal place (`8.0% left`, `54.0% left`, `62.5% left`). Structured source data may keep finer precision; presentation normalizes the displayed value and uses the same normalized value for the bar and color thresholds.
 
 User-facing timestamps use the local system timezone and are formatted as `{Mon} {day}, {HH:MM} UTC{±offset}` — for example `Jul 3, 22:15 UTC+2`. The day uses a fixed two-character field (`Jul  6, 02:59`, not `Jul 6, 02:59`) so clock times align after the comma across rows. Whole hours omit minutes in the offset (`UTC+2`, not `UTC+2:00`). If a source timestamp cannot be parsed reliably, presentation keeps the original source text.
 

@@ -27,9 +27,8 @@ pub fn format_raw_output(data: &crate::types::SourceData) -> String {
 }
 
 pub fn format_structured_output(data: &crate::types::SourceData) -> String {
-    serde_json::to_string_pretty(&data.structured).unwrap_or_else(|error| {
-        format!("failed to serialize structured data: {error}")
-    })
+    serde_json::to_string_pretty(&data.structured)
+        .unwrap_or_else(|error| format!("failed to serialize structured data: {error}"))
 }
 
 #[cfg(test)]
@@ -140,10 +139,7 @@ mod tests {
 
     #[test]
     fn pad_visible_right_ignores_ansi_color_codes() {
-        let bar = format!(
-            "\x1b[32m{}\x1b[0m",
-            common::visible_limit_bar(54.0)
-        );
+        let bar = format!("\x1b[32m{}\x1b[0m", common::visible_limit_bar(54.0));
         let padded = common::pad_visible_right(&bar, common::LIMIT_BAR_WIDTH);
 
         assert_eq!(common::visible_width(&padded), common::LIMIT_BAR_WIDTH);
@@ -155,8 +151,8 @@ mod tests {
 
         assert_eq!(block.provider_label, "CODEX");
         assert!(block.body.contains("5h   "));
-        assert!(block.body.contains("8% left | reset Jun 30, 21:41 UTC-2"));
-        assert!(block.body.contains("54% left | reset Jul 3, 21:41 UTC-2"));
+        assert!(block.body.contains("8.0% left | reset Jun 30, 21:41 UTC-2"));
+        assert!(block.body.contains("54.0% left | reset Jul 3, 21:41 UTC-2"));
         assert!(block.body.contains("344.2 credits available"));
         assert!(block.body.contains("Data as of: Jul 3, 21:41 UTC-2"));
     }
@@ -196,8 +192,12 @@ mod tests {
         let block = usage_block(&sample_usage_info());
 
         assert_eq!(block.provider_label, "CODEX");
-        assert!(block.body.contains("Tokens        input 120,000 | cached 80,000 | output 30,000 | total 230,000"));
-        assert!(block.body.contains("Activity      14 sessions | 128 turns | latest Jul 3, 21:41 UTC-2"));
+        assert!(block.body.contains(
+            "Tokens        input 120,000 | cached 80,000 | output 30,000 | total 230,000"
+        ));
+        assert!(block
+            .body
+            .contains("Activity      14 sessions | 128 turns | latest Jul 3, 21:41 UTC-2"));
         assert!(block.body.contains("Models        top: gpt-5"));
         assert!(block.body.contains("Money         $12.40 used"));
         assert!(block.body.contains("Data as of: Jul 3, 21:41 UTC-2"));
@@ -207,8 +207,14 @@ mod tests {
     fn limit_bar_uses_twenty_five_characters_without_color() {
         let bar = common::visible_limit_bar(54.0);
         assert_eq!(bar.chars().count(), 25);
-        assert_eq!(bar.chars().filter(|character| *character == '■').count(), 14);
-        assert_eq!(bar.chars().filter(|character| *character == '□').count(), 11);
+        assert_eq!(
+            bar.chars().filter(|character| *character == '■').count(),
+            14
+        );
+        assert_eq!(
+            bar.chars().filter(|character| *character == '□').count(),
+            11
+        );
         assert!(!bar.contains('◧'));
     }
 
@@ -230,9 +236,10 @@ mod tests {
     }
 
     #[test]
-    fn format_percent_omits_trailing_zero() {
-        assert_eq!(common::format_percent(84.0), "84");
+    fn format_percent_always_shows_one_decimal_place() {
+        assert_eq!(common::format_percent(84.0), "84.0");
         assert_eq!(common::format_percent(62.5), "62.5");
+        assert_eq!(common::format_percent(100.0), "100.0");
     }
 
     #[test]
