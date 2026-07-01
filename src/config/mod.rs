@@ -9,7 +9,7 @@ pub struct Config {
 const DEFAULT_CONFIG: &str = "\
 default_sources = [
   \"codex_local\",
-  \"claude_hook\",
+  \"claude_local\",
   \"cursor_api2\"
 ]
 ";
@@ -136,7 +136,7 @@ mod tests {
 
         assert_eq!(
             parsed.default_sources,
-            vec![Source::CodexLocal, Source::ClaudeHook, Source::CursorApi2]
+            vec![Source::CodexLocal, Source::ClaudeLocal, Source::CursorApi2]
         );
     }
 

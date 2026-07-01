@@ -188,10 +188,7 @@ fn build_structured_from_payload(payload: &str, origin: PayloadOrigin) -> Struct
 
     let rate_limits = parse_rate_limits(rate_limits_value);
     let limits = build_structured_limits(&rate_limits);
-    if limits.is_empty()
-        && rate_limits.credits.is_none()
-        && rate_limits.plan_type.is_none()
-    {
+    if limits.is_empty() && rate_limits.credits.is_none() && rate_limits.plan_type.is_none() {
         diagnostics.push("`rate_limits` has no supported limit fields".to_string());
         return finish(
             origin,
@@ -286,9 +283,9 @@ fn unavailable_source_data(message: &str) -> SourceData {
 fn origin_diagnostics(origin: PayloadOrigin) -> Vec<String> {
     match origin {
         PayloadOrigin::Hook => vec!["data origin: hook stdin".to_string()],
-        PayloadOrigin::Cache(_) => vec![
-            "data origin: cache (~/.config/ai-limits/claude-hook-payload.json)".to_string(),
-        ],
+        PayloadOrigin::Cache(_) => {
+            vec!["data origin: cache (~/.config/ai-limits/claude-hook-payload.json)".to_string()]
+        }
     }
 }
 
@@ -377,9 +374,8 @@ fn read_stdin_with_timeout(timeout: Duration) -> io::Result<String> {
 }
 
 fn cache_path() -> io::Result<PathBuf> {
-    let home = std::env::var_os("HOME").ok_or_else(|| {
-        io::Error::new(io::ErrorKind::NotFound, "HOME is not set")
-    })?;
+    let home = std::env::var_os("HOME")
+        .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "HOME is not set"))?;
     Ok(PathBuf::from(home)
         .join(".config")
         .join("ai-limits")
@@ -568,7 +564,9 @@ mod tests {
         assert_eq!(secondary.used_percent, Some(71.9));
         assert_eq!(secondary.remaining_percent, Some(28.1));
         assert_eq!(secondary.resets_at.as_deref(), Some("2025-06-22T13:46:40Z"));
-        assert!(structured.diagnostics.contains(&"data origin: hook stdin".to_string()));
+        assert!(structured
+            .diagnostics
+            .contains(&"data origin: hook stdin".to_string()));
     }
 
     #[test]
@@ -578,7 +576,10 @@ mod tests {
         assert!(structured.status.data_available);
         assert_eq!(structured.limits.len(), 2);
         assert_eq!(structured.limits[0].name, "five_hour");
-        assert_eq!(structured.limits[0].window_label.as_deref(), Some("5-hour window"));
+        assert_eq!(
+            structured.limits[0].window_label.as_deref(),
+            Some("5-hour window")
+        );
         assert_eq!(structured.limits[0].window_minutes, Some(300));
         assert_eq!(structured.limits[0].used_percent, Some(1.0));
         assert_eq!(structured.limits[0].remaining_percent, Some(99.0));

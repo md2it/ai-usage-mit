@@ -19,9 +19,9 @@ For the user, the app acts as a local assistant: it collects available usage and
   - **local** (`--codex-local`) — reads token usage and local `rate_limits` snapshots from `${CODEX_HOME:-~/.codex}` JSONL files.
   - **CLI** (`--codex-cli`) — reads limits via the Codex CLI `/status` command.
 - **Claude**
-  - **statusline hook** (`--claude-hook`, default) — reads live `rate_limits` from Claude Code statusline hook stdin payload (5h/7d windows, reset).
+  - **statusline hook** (`--claude-hook`) — reads live `rate_limits` from Claude Code statusline hook stdin payload (5h/7d windows, reset).
   - **CLI** (`--claude-cli`) — reads limits via the Claude CLI `/usage` command.
-  - **local** (`--claude-local`) — aggregates token usage history from local transcript JSONL files.
+  - **local** (`--claude-local`, default) — aggregates token usage history from local transcript JSONL files.
 - **Cursor** (`--cursor-api2`) — reads usage from `api2.cursor.sh` using a token from `cursor agent login`; if the API is unavailable, falls back to `cursor agent about/status`.
 - **Config** — optional `~/.config/ai-limits/config.toml` with `default_sources`; create with `--init-config`.
 
@@ -61,7 +61,7 @@ Query only selected sources by passing source flags:
 ./bin/ai-limits --codex-local --cursor-api2
 ```
 
-`--all` and `-a` force all current sources, even when the config defines a narrower default. When no source is selected, the command uses config defaults or, if no config exists, the built-in defaults: Codex local, Claude hook, Cursor API.
+`--all` and `-a` force all current sources, even when the config defines a narrower default. When no source is selected, the command uses config defaults or, if no config exists, the built-in defaults: Codex local, Claude local, Cursor API.
 
 Optional config path:
 
@@ -74,7 +74,7 @@ Example:
 ```toml
 default_sources = [
   "codex_local",
-  "claude_hook",
+  "claude_local",
   "cursor_api2"
 ]
 ```

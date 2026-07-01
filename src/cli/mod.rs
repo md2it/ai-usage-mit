@@ -399,7 +399,7 @@ Examples:
 Config:
   ~/.config/ai-limits/config.toml
 
-  default_sources = [\"codex_local\", \"claude_hook\", \"cursor_api2\"]
+  default_sources = [\"codex_local\", \"claude_local\", \"cursor_api2\"]
 "
     );
 }

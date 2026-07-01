@@ -155,8 +155,7 @@ pub fn build_source_data(response: &str) -> SourceData {
     let mut limits = Vec::new();
     let mut diagnostics = Vec::new();
 
-    if parsed.remaining.is_some() || parsed.limit.is_some() || parsed.total_percent_used.is_some()
-    {
+    if parsed.remaining.is_some() || parsed.limit.is_some() || parsed.total_percent_used.is_some() {
         let (used_amount, remaining_amount, total_amount) = fill_amount_triple(
             parsed
                 .limit
@@ -175,9 +174,7 @@ pub fn build_source_data(response: &str) -> SourceData {
             name: "plan_usage".to_string(),
             window_label: billing_cycle_label(parsed.billing_cycle_start, parsed.billing_cycle_end),
             window_minutes: None,
-            resets_at: parsed
-                .billing_cycle_end
-                .map(format_unix_ms_timestamp),
+            resets_at: parsed.billing_cycle_end.map(format_unix_ms_timestamp),
             used_percent,
             remaining_percent,
             used_amount: cents_to_usd(used_amount),
@@ -273,9 +270,7 @@ fn parse_cursor_api_fields(response: &str) -> CursorApiFields {
     let api_percent_used = json_number_after_key(response, "apiPercentUsed");
     let billing_cycle_start = json_string_after_key(response, "billingCycleStart")
         .and_then(|value| value.parse::<i64>().ok())
-        .or_else(|| {
-            json_number_after_key(response, "billingCycleStart").map(|value| value as i64)
-        });
+        .or_else(|| json_number_after_key(response, "billingCycleStart").map(|value| value as i64));
     let billing_cycle_end = json_string_after_key(response, "billingCycleEnd")
         .and_then(|value| value.parse::<i64>().ok())
         .or_else(|| json_number_after_key(response, "billingCycleEnd").map(|value| value as i64));
@@ -352,9 +347,15 @@ fn fill_amount_triple(
     total: Option<f64>,
 ) -> (Option<f64>, Option<f64>, Option<f64>) {
     match (used, remaining, total) {
-        (None, Some(remaining), Some(total)) => (Some((total - remaining).max(0.0)), Some(remaining), Some(total)),
+        (None, Some(remaining), Some(total)) => (
+            Some((total - remaining).max(0.0)),
+            Some(remaining),
+            Some(total),
+        ),
         (Some(used), None, Some(total)) => (Some(used), Some((total - used).max(0.0)), Some(total)),
-        (Some(used), Some(remaining), None) => (Some(used), Some(remaining), Some(used + remaining)),
+        (Some(used), Some(remaining), None) => {
+            (Some(used), Some(remaining), Some(used + remaining))
+        }
         other => other,
     }
 }
@@ -611,7 +612,8 @@ mod tests {
 
     #[test]
     fn calculates_remaining_percent_from_used_percent() {
-        let raw = r#"{"planUsage":{"totalPercentUsed":37.5,"autoPercentUsed":10,"apiPercentUsed":5}}"#;
+        let raw =
+            r#"{"planUsage":{"totalPercentUsed":37.5,"autoPercentUsed":10,"apiPercentUsed":5}}"#;
         let result = build_source_data(raw);
         let plan = result
             .structured
@@ -622,9 +624,11 @@ mod tests {
 
         assert_eq!(plan.used_percent, Some(37.5));
         assert_eq!(plan.remaining_percent, Some(62.5));
-        assert!(result.structured.diagnostics.iter().any(|entry| {
-            entry.contains("plan usage amounts are unavailable")
-        }));
+        assert!(result
+            .structured
+            .diagnostics
+            .iter()
+            .any(|entry| { entry.contains("plan usage amounts are unavailable") }));
     }
 
     #[test]

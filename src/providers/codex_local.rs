@@ -81,10 +81,13 @@ pub fn collect() -> io::Result<SourceData> {
             root: root.display().to_string(),
             ..CodexLocalRaw::default()
         };
-        let structured = build_structured(&raw, collected_at, false, false, Some(format!(
-            "not found: {}",
-            root.display()
-        )));
+        let structured = build_structured(
+            &raw,
+            collected_at,
+            false,
+            false,
+            Some(format!("not found: {}", root.display())),
+        );
         return Ok(source_data_from_raw(&raw, structured));
     }
 
@@ -94,10 +97,7 @@ pub fn collect() -> io::Result<SourceData> {
 
     let raw = raw_from_usage(&root, &usage);
     let (data_available, message) = if usage.token_events == 0 {
-        (
-            false,
-            Some("token events: not found".to_string()),
-        )
+        (false, Some("token events: not found".to_string()))
     } else {
         (true, None)
     };
@@ -537,10 +537,7 @@ mod tests {
         assert_eq!(primary.remaining_percent, Some(55.0));
         assert_eq!(primary.window_minutes, Some(300));
         assert_eq!(primary.window_label.as_deref(), Some("5h (300m)"));
-        assert_eq!(
-            primary.resets_at.as_deref(),
-            Some("2025-06-15T16:06:40Z")
-        );
+        assert_eq!(primary.resets_at.as_deref(), Some("2025-06-15T16:06:40Z"));
 
         let secondary = structured
             .limits
@@ -665,7 +662,9 @@ mod tests {
         let structured = build_structured(&raw, None, true, true, None);
 
         assert_eq!(structured.account.credits_remaining, None);
-        assert!(structured.diagnostics.contains(&"credits: unlimited".to_string()));
+        assert!(structured
+            .diagnostics
+            .contains(&"credits: unlimited".to_string()));
     }
 
     #[test]

@@ -2,8 +2,9 @@ use crate::types::{LimitInfo, StructuredSourceInfo};
 
 use super::common::{
     format_data_as_of, format_decimal, format_percent, format_unavailable_block, normalize_percent,
-    pad_visible_left, pad_visible_right, provider_label, render_limit_bar, window_label_for_display,
-    ColorConfig, ProviderBlock, LIMIT_BAR_WIDTH, LIMIT_LEFT_WIDTH, LIMIT_WINDOW_WIDTH,
+    pad_visible_left, pad_visible_right, provider_label, render_limit_bar,
+    window_label_for_display, ColorConfig, ProviderBlock, LIMIT_BAR_WIDTH, LIMIT_LEFT_WIDTH,
+    LIMIT_WINDOW_WIDTH,
 };
 use super::time::{format_user_timestamp, TimeContext};
 
@@ -43,7 +44,11 @@ fn format_limits_body(info: &StructuredSourceInfo, color: &ColorConfig) -> Strin
     body
 }
 
-fn format_limit_row(limit: &LimitInfo, color: &ColorConfig, time_context: &TimeContext) -> Option<String> {
+fn format_limit_row(
+    limit: &LimitInfo,
+    color: &ColorConfig,
+    time_context: &TimeContext,
+) -> Option<String> {
     let remaining_percent = limit.remaining_percent.or_else(|| {
         limit
             .used_percent
@@ -52,7 +57,11 @@ fn format_limit_row(limit: &LimitInfo, color: &ColorConfig, time_context: &TimeC
     let remaining_display = normalize_percent(remaining_percent);
 
     let window = pad_visible_right(
-        &format!("{:<width$}", window_label_for_display(limit), width = LIMIT_WINDOW_WIDTH),
+        &format!(
+            "{:<width$}",
+            window_label_for_display(limit),
+            width = LIMIT_WINDOW_WIDTH
+        ),
         LIMIT_WINDOW_WIDTH,
     );
     let bar = pad_visible_right(&render_limit_bar(remaining_display, color), LIMIT_BAR_WIDTH);

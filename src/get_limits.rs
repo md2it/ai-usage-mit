@@ -6,7 +6,10 @@ use crate::providers::{
 use crate::types::{Source, SourceData, SourceReport};
 
 pub fn get_limits(sources: &[Source]) -> io::Result<Vec<SourceReport>> {
-    sources.iter().map(|source| get_source_limits(*source)).collect()
+    sources
+        .iter()
+        .map(|source| get_source_limits(*source))
+        .collect()
 }
 
 pub fn get_source_limits(source: Source) -> io::Result<SourceReport> {

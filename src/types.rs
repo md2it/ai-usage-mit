@@ -18,7 +18,7 @@ impl Source {
         Self::CursorApi2,
     ];
 
-    pub const DEFAULTS: [Self; 3] = [Self::CodexLocal, Self::ClaudeHook, Self::CursorApi2];
+    pub const DEFAULTS: [Self; 3] = [Self::CodexLocal, Self::ClaudeLocal, Self::CursorApi2];
 
     pub fn parse(value: &str) -> Result<Self, String> {
         match value {

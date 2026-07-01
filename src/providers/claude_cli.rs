@@ -4,8 +4,8 @@ use chrono::Utc;
 
 use crate::infra::process::run_provider;
 use crate::types::{
-    LimitInfo, MoneyUsage, ProviderRun, SourceData, SourceStatus, StructuredSourceInfo,
-    TokenUsage, UsageInfo,
+    LimitInfo, MoneyUsage, ProviderRun, SourceData, SourceStatus, StructuredSourceInfo, TokenUsage,
+    UsageInfo,
 };
 
 const CLAUDE_COMMAND: &str = "claude";
@@ -51,9 +51,7 @@ pub fn structured_from_output(stdout: &str) -> StructuredSourceInfo {
             SourceStatus {
                 data_available: false,
                 access_available: true,
-                message: Some(
-                    "Claude CLI is not ready: interactive setup is required".to_string(),
-                ),
+                message: Some("Claude CLI is not ready: interactive setup is required".to_string()),
             },
             Vec::new(),
             UsageInfo::default(),
@@ -224,11 +222,7 @@ fn parse_money_line(line: &str) -> MoneyUsage {
     };
 
     let value = value.trim();
-    let numeric = value
-        .trim_start_matches('$')
-        .trim()
-        .parse::<f64>()
-        .ok();
+    let numeric = value.trim_start_matches('$').trim().parse::<f64>().ok();
 
     MoneyUsage {
         used_amount: numeric,
@@ -503,11 +497,10 @@ Usage: 0input,0output,0cacheread,0cachewrite
         assert_eq!(data.raw.as_deref(), Some(SAMPLE_OUTPUT));
         assert_eq!(data.stderr, "expect warning\n");
         assert!(data.structured.status.data_available);
-        assert!(
-            data.structured
-                .diagnostics
-                .iter()
-                .any(|entry| entry.contains("stderr: expect warning"))
-        );
+        assert!(data
+            .structured
+            .diagnostics
+            .iter()
+            .any(|entry| entry.contains("stderr: expect warning")));
     }
 }
