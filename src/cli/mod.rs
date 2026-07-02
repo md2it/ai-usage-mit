@@ -3,7 +3,7 @@ use std::path::Path;
 use std::process::ExitCode;
 use std::sync::mpsc;
 use std::thread;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use crate::infra::loader::{
     loader_show_delay, loader_tick, LoaderView, TerminalStatus, TerminalUi,
@@ -42,10 +42,10 @@ fn run_cli() -> io::Result<TerminalStatus> {
     }
 
     if args.init_config {
-        if args.all || !args.sources.is_empty() {
+        if args.all || !args.sources.is_empty() || args.watch.is_some() {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidInput,
-                "--init-config cannot be combined with source flags or --all",
+                "--init-config cannot be combined with source flags, --all, or --watch",
             ));
         }
 
@@ -53,13 +53,28 @@ fn run_cli() -> io::Result<TerminalStatus> {
         return Ok(status);
     }
 
+    let config = crate::config::load()?;
+    let watch_interval = resolve_watch_interval(&args, config.as_ref());
     let output_mode = args.output_mode;
-    let sources = select_sources(args)?;
+    let sources = resolve_sources(args, config)?;
+
+    if let Some(interval) = watch_interval {
+        loop {
+            run_once(&sources, output_mode)?;
+            thread::sleep(interval);
+        }
+    }
+
+    let status = run_once(&sources, output_mode)?;
+
+    Ok(status)
+}
+
+fn run_once(sources: &[Source], output_mode: OutputMode) -> io::Result<TerminalStatus> {
     let mut ui = TerminalUi::new();
     ui.print_top()?;
-    let status = run_sources_with_terminal_ui(&mut ui, &sources, output_mode)?;
+    let status = run_sources_with_terminal_ui(&mut ui, sources, output_mode)?;
     ui.print_bottom(status)?;
-
     Ok(status)
 }
 
@@ -273,6 +288,7 @@ struct CliArgs {
     help: bool,
     init_config: bool,
     all: bool,
+    watch: Option<Option<Duration>>,
     output_mode: OutputMode,
     sources: Vec<Source>,
 }
@@ -290,6 +306,7 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
         help: false,
         init_config: false,
         all: false,
+        watch: None,
         output_mode: OutputMode::Limits,
         sources: Vec::new(),
     };
@@ -306,6 +323,9 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
             }
             "-a" | "--all" => {
                 parsed.all = true;
+            }
+            "-w" | "--watch" => {
+                parsed.watch = Some(None);
             }
             "--usage" => {
                 if output_mode.is_some() {
@@ -353,6 +373,15 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
                 parsed.sources.push(Source::CursorApi2);
             }
             _ => {
+                if let Some(value) = arg.strip_prefix("--watch=") {
+                    parsed.watch = Some(Some(parse_watch_interval_arg(value)?));
+                    continue;
+                }
+                if let Some(value) = arg.strip_prefix("-w=") {
+                    parsed.watch = Some(Some(parse_watch_interval_arg(value)?));
+                    continue;
+                }
+
                 return Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
                     format!("unknown argument `{arg}`"),
@@ -368,6 +397,15 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
     Ok(parsed)
 }
 
+fn parse_watch_interval_arg(value: &str) -> io::Result<Duration> {
+    crate::config::parse_duration(value).map_err(|error| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("invalid --watch interval: {error}"),
+        )
+    })
+}
+
 fn print_help() {
     println!(
         "\
@@ -378,6 +416,7 @@ Options:
   --help, -h       Show this help
   --init-config    Create / overwrite the user config file
   --all, -a        Query all current sources, ignoring config defaults
+  --watch, -w      Repeat the query on an interval
   --usage          Show user-facing usage summary
   --raw, -r        Return raw source data
   --structured, -s Return structured source data
@@ -392,6 +431,8 @@ Technical source options:
 
 Examples:
   ai-limits --all
+  ai-limits --watch
+  ai-limits --watch=10m
   ai-limits --all --usage
   ai-limits --all --raw
   ai-limits --all --structured
@@ -400,13 +441,24 @@ Config:
   ~/.config/ai-limits/config.toml
 
   default_sources = [\"codex_local\", \"claude_statusline_rate_limits\", \"claude_local\", \"cursor_api2\"]
+  watch_interval = \"5m\"
 "
     );
 }
 
-fn select_sources(args: CliArgs) -> io::Result<Vec<Source>> {
-    let config = crate::config::load()?;
-    resolve_sources(args, config)
+fn resolve_watch_interval(
+    args: &CliArgs,
+    config: Option<&crate::config::Config>,
+) -> Option<Duration> {
+    match args.watch {
+        Some(Some(interval)) => Some(interval),
+        Some(None) => Some(
+            config
+                .map(|config| config.watch_interval)
+                .unwrap_or_else(|| Duration::from_secs(5 * 60)),
+        ),
+        None => None,
+    }
 }
 
 fn resolve_sources(
@@ -461,6 +513,7 @@ mod tests {
         let args = parse(&["--codex-cli", "--claude-local"]);
         let config = Config {
             default_sources: Source::DEFAULTS.to_vec(),
+            watch_interval: Duration::from_secs(60),
         };
         let selected =
             resolve_sources(args, Some(config)).expect("explicit source flags should win");
@@ -489,6 +542,48 @@ mod tests {
         assert_eq!(parse(&["-r"]).output_mode, OutputMode::Raw);
         assert_eq!(parse(&["--structured"]).output_mode, OutputMode::Structured);
         assert_eq!(parse(&["-s"]).output_mode, OutputMode::Structured);
+    }
+
+    #[test]
+    fn supports_watch_flag_with_optional_interval() {
+        assert_eq!(parse(&["--watch"]).watch, Some(None));
+        assert_eq!(parse(&["-w"]).watch, Some(None));
+        assert_eq!(
+            parse(&["--watch=10m"]).watch,
+            Some(Some(Duration::from_secs(10 * 60)))
+        );
+        assert_eq!(
+            parse(&["-w=30s"]).watch,
+            Some(Some(Duration::from_secs(30)))
+        );
+    }
+
+    #[test]
+    fn rejects_invalid_watch_interval_arg() {
+        assert!(parse_args(["--watch=10"].into_iter().map(String::from)).is_err());
+        assert!(parse_args(["--watch=0s"].into_iter().map(String::from)).is_err());
+    }
+
+    #[test]
+    fn resolves_watch_interval_from_flag_config_and_default() {
+        let config = Config {
+            default_sources: Vec::new(),
+            watch_interval: Duration::from_secs(20),
+        };
+
+        assert_eq!(
+            resolve_watch_interval(&parse(&["--watch=30s"]), Some(&config)),
+            Some(Duration::from_secs(30))
+        );
+        assert_eq!(
+            resolve_watch_interval(&parse(&["--watch"]), Some(&config)),
+            Some(Duration::from_secs(20))
+        );
+        assert_eq!(
+            resolve_watch_interval(&parse(&["--watch"]), None),
+            Some(Duration::from_secs(5 * 60))
+        );
+        assert_eq!(resolve_watch_interval(&parse(&[]), Some(&config)), None);
     }
 
     #[test]

@@ -1,9 +1,10 @@
-use std::{env, fs, io, path::PathBuf};
+use std::{env, fs, io, path::PathBuf, time::Duration};
 
 use crate::types::Source;
 
 pub struct Config {
     pub default_sources: Vec<Source>,
+    pub watch_interval: Duration,
 }
 
 const DEFAULT_CONFIG: &str = "\
@@ -13,7 +14,10 @@ default_sources = [
   \"claude_local\",
   \"cursor_api2\"
 ]
+watch_interval = \"5m\"
 ";
+
+const DEFAULT_WATCH_INTERVAL: Duration = Duration::from_secs(5 * 60);
 
 pub fn load() -> io::Result<Option<Config>> {
     let path = config_path()?;
@@ -56,6 +60,7 @@ pub fn write_default(path: &std::path::Path) -> io::Result<()> {
 
 fn parse_config(content: &str) -> Result<Config, String> {
     let mut default_sources = None;
+    let mut watch_interval = None;
     let mut lines = content.lines();
 
     while let Some(line) = lines.next() {
@@ -88,12 +93,20 @@ fn parse_config(content: &str) -> Result<Config, String> {
 
                 default_sources = Some(parse_sources_array(&value)?);
             }
+            "watch_interval" => {
+                if watch_interval.is_some() {
+                    return Err("duplicate `watch_interval`".to_string());
+                }
+
+                watch_interval = Some(parse_quoted_duration(value.trim())?);
+            }
             unknown => return Err(format!("unknown config key `{unknown}`")),
         }
     }
 
     Ok(Config {
         default_sources: default_sources.unwrap_or_default(),
+        watch_interval: watch_interval.unwrap_or(DEFAULT_WATCH_INTERVAL),
     })
 }
 
@@ -127,6 +140,41 @@ fn parse_sources_array(value: &str) -> Result<Vec<Source>, String> {
     Ok(sources)
 }
 
+pub fn parse_duration(value: &str) -> Result<Duration, String> {
+    let unit = value
+        .chars()
+        .last()
+        .ok_or_else(|| "duration cannot be empty".to_string())?;
+    let amount = value
+        .strip_suffix(unit)
+        .ok_or_else(|| format!("invalid duration `{value}`"))?;
+    let amount = amount
+        .parse::<u64>()
+        .map_err(|_| format!("invalid duration amount `{amount}`"))?;
+
+    if amount == 0 {
+        return Err("duration must be greater than zero".to_string());
+    }
+
+    let seconds = match unit {
+        's' => amount,
+        'm' => amount.saturating_mul(60),
+        'h' => amount.saturating_mul(60 * 60),
+        _ => return Err(format!("unsupported duration unit `{unit}`")),
+    };
+
+    Ok(Duration::from_secs(seconds))
+}
+
+fn parse_quoted_duration(value: &str) -> Result<Duration, String> {
+    let value = value
+        .strip_prefix('"')
+        .and_then(|value| value.strip_suffix('"'))
+        .ok_or_else(|| format!("expected duration in double quotes, got `{value}`"))?;
+
+    parse_duration(value)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -144,6 +192,7 @@ mod tests {
                 Source::CursorApi2
             ]
         );
+        assert_eq!(parsed.watch_interval, Duration::from_secs(5 * 60));
     }
 
     #[test]
@@ -152,5 +201,19 @@ mod tests {
             .expect("claude statusline should be accepted");
 
         assert_eq!(parsed.default_sources, vec![Source::ClaudeStatusline]);
+    }
+
+    #[test]
+    fn parses_watch_interval() {
+        let parsed = parse_config("watch_interval = \"30s\"").expect("watch interval should parse");
+
+        assert_eq!(parsed.watch_interval, Duration::from_secs(30));
+    }
+
+    #[test]
+    fn rejects_invalid_watch_interval() {
+        assert!(parse_config("watch_interval = \"5\"").is_err());
+        assert!(parse_config("watch_interval = \"0s\"").is_err());
+        assert!(parse_config("watch_interval = 5m").is_err());
     }
 }
