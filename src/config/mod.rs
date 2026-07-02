@@ -9,6 +9,7 @@ pub struct Config {
 const DEFAULT_CONFIG: &str = "\
 default_sources = [
   \"codex_local\",
+  \"claude_statusline_rate_limits\",
   \"claude_local\",
   \"cursor_api2\"
 ]
@@ -136,15 +137,20 @@ mod tests {
 
         assert_eq!(
             parsed.default_sources,
-            vec![Source::CodexLocal, Source::ClaudeLocal, Source::CursorApi2]
+            vec![
+                Source::CodexLocal,
+                Source::ClaudeStatusline,
+                Source::ClaudeLocal,
+                Source::CursorApi2
+            ]
         );
     }
 
     #[test]
-    fn parse_config_accepts_claude_hook() {
-        let parsed = parse_config("default_sources = [\"claude_hook\"]")
-            .expect("claude_hook should be accepted");
+    fn parse_config_accepts_claude_statusline() {
+        let parsed = parse_config("default_sources = [\"claude_statusline_rate_limits\"]")
+            .expect("claude statusline should be accepted");
 
-        assert_eq!(parsed.default_sources, vec![Source::ClaudeHook]);
+        assert_eq!(parsed.default_sources, vec![Source::ClaudeStatusline]);
     }
 }

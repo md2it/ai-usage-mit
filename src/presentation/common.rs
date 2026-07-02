@@ -29,7 +29,10 @@ pub fn format_data_as_of(info: &StructuredSourceInfo) -> String {
     match info.data_as_of.as_deref() {
         Some(value) => {
             let context = TimeContext::from_structured(info);
-            format!("Source {source}: {}", format_user_timestamp(value, &context))
+            format!(
+                "Source {source}: {}",
+                format_user_timestamp(value, &context)
+            )
         }
         None => format!("Source {source}: unknown"),
     }

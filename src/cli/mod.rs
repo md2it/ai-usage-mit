@@ -233,7 +233,7 @@ fn print_source_report(
 fn failed_source_block(source: Source, error: &str) -> ProviderBlock {
     let provider = match source {
         Source::CodexLocal | Source::CodexCli => "CODEX",
-        Source::ClaudeHook | Source::ClaudeCli | Source::ClaudeLocal => "CLAUDE",
+        Source::ClaudeStatusline | Source::ClaudeCli | Source::ClaudeLocal => "CLAUDE",
         Source::CursorApi2 => "CURSOR",
     };
 
@@ -343,8 +343,8 @@ fn parse_args(args: impl Iterator<Item = String>) -> io::Result<CliArgs> {
             "--claude-cli" => {
                 parsed.sources.push(Source::ClaudeCli);
             }
-            "--claude-hook" => {
-                parsed.sources.push(Source::ClaudeHook);
+            "--claude-statusline" => {
+                parsed.sources.push(Source::ClaudeStatusline);
             }
             "--claude-local" => {
                 parsed.sources.push(Source::ClaudeLocal);
@@ -385,7 +385,7 @@ Options:
 Technical source options:
   --codex-local    Query Codex from local session JSONL files
   --codex-cli      Query Codex through the Codex CLI
-  --claude-hook    Query Claude from statusline hook stdin payload
+  --claude-statusline Query Claude live limits from statusline cache/stdin
   --claude-cli     Query Claude through the Claude CLI
   --claude-local   Query Claude from local transcript JSONL files
   --cursor-api2    Query Cursor through api2.cursor.sh
@@ -399,7 +399,7 @@ Examples:
 Config:
   ~/.config/ai-limits/config.toml
 
-  default_sources = [\"codex_local\", \"claude_local\", \"cursor_api2\"]
+  default_sources = [\"codex_local\", \"claude_statusline_rate_limits\", \"claude_local\", \"cursor_api2\"]
 "
     );
 }
@@ -469,10 +469,10 @@ mod tests {
     }
 
     #[test]
-    fn supports_claude_hook_flag() {
-        let args = parse(&["--claude-hook"]);
+    fn supports_claude_statusline_flag() {
+        let args = parse(&["--claude-statusline"]);
 
-        assert_eq!(args.sources, vec![Source::ClaudeHook]);
+        assert_eq!(args.sources, vec![Source::ClaudeStatusline]);
     }
 
     #[test]

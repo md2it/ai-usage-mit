@@ -19,7 +19,7 @@ For the user, the app acts as a local assistant: it collects available usage and
   - **local** (`--codex-local`) — reads token usage and local `rate_limits` snapshots from `${CODEX_HOME:-~/.codex}` JSONL files.
   - **CLI** (`--codex-cli`) — reads limits via the Codex CLI `/status` command.
 - **Claude**
-  - **statusline hook** (`--claude-hook`) — reads live `rate_limits` from Claude Code statusline hook stdin payload (5h/7d windows, reset).
+  - **statusline** (`--claude-statusline`) — reads live `rate_limits` from Claude Code statusline cache/stdin payload (5h/7d windows, reset).
   - **CLI** (`--claude-cli`) — reads limits via the Claude CLI `/usage` command.
   - **local** (`--claude-local`, default) — aggregates token usage history from local transcript JSONL files.
 - **Cursor** (`--cursor-api2`) — reads usage from `api2.cursor.sh` using a token from `cursor agent login`; if the API is unavailable, falls back to `cursor agent about/status`.
@@ -40,7 +40,7 @@ Supported flags are:
 - `--watch`, `-w`
 - `--codex-local`
 - `--codex-cli`
-- `--claude-hook`
+- `--claude-statusline`
 - `--claude-cli`
 - `--claude-local`
 - `--cursor-api2`

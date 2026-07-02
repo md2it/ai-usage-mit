@@ -39,7 +39,7 @@ watch_interval = "5m"
 
 A list of source identifiers queried when the command runs without explicit source flags and without `--all`.
 
-Valid identifiers: `codex_local`, `codex_cli`, `claude_hook`, `claude_cli`, `claude_local`, `cursor_api2`.
+Valid identifiers: `codex_local`, `codex_cli`, `claude_statusline_rate_limits`, `claude_cli`, `claude_local`, `cursor_api2`.
 
 Built-in default, used when the config does not set this key or the config file does not exist:
 

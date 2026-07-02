@@ -200,7 +200,9 @@ mod tests {
             .contains("Activity      14 sessions | 128 turns | latest Jul 3, 21:41 UTC-2"));
         assert!(block.body.contains("Models        top: gpt-5"));
         assert!(block.body.contains("Money         $12.40 used"));
-        assert!(block.body.contains("Source codex-local: Jul 3, 21:41 UTC-2"));
+        assert!(block
+            .body
+            .contains("Source codex-local: Jul 3, 21:41 UTC-2"));
     }
 
     #[test]

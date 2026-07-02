@@ -2,11 +2,11 @@
 
 ## Current Status
 
-PoC uses two Claude sources and one live-limit candidate:
+PoC uses two Claude sources and one live-limit method:
 
 - `claude_cli_usage`: launches `claude --no-chrome`, sends `/usage`, parses TUI lines.
 - `claude_local_usage`: scans local transcript JSONL files and aggregates token usage history.
-- `claude_statusline_rate_limits`: reads Claude Code hook stdin payload and extracts live `rate_limits` when available.
+- `claude_statusline_rate_limits`: reads Claude Code statusline stdin payload and extracts live `rate_limits` when available.
 
 ---
 
@@ -78,6 +78,17 @@ Current ai-limits implementation state:
 - `--claude-local` reconstructs an active 5-hour window from local transcripts.
 - The current implementation uses `input_tokens + output_tokens` and a local `88_000` token denominator for the 5-hour window.
 - This is a local estimate, not an official Claude limit signal.
+- Current reset calculation uses a local reconstructed window and is less reliable than the token numerator.
+- The reset estimate must not be presented as official when no live `rate_limits` snapshot is available.
+
+Reset reconstruction findings from 2026-07-02:
+
+- The reliable formula is still `window_start + 5h`; the weak point is determining `window_start`.
+- `round_down(first_turn_timestamp_to_hour) + 5h` is too coarse and caused observed reset drift.
+- `first transcript turn after a >=5h inactivity gap + 5h` is better than hourly rounding but still incomplete.
+- In observed data, this gap-only heuristic still missed the trusted reset because the true server window boundary can fall inside an active transcript period.
+- The best local improvement is to use the latest known server reset as an anchor when one has been captured from `rate_limits`, `/usage`, `rate_limit_event`, or a 429 payload.
+- Without a server anchor, `claude_local_usage` remains an estimate for reset timing.
 
 Important 5-hour observation from 2026-06-30:
 
@@ -123,23 +134,28 @@ Do not treat as confirmed yet:
 
 ## Provider Method: `claude_statusline_rate_limits`
 
+Method details: [../methods/statusline.md](../methods/statusline.md).
+
 Minimal source:
 
-- Claude Code statusline hook stdin payload
+- Claude Code statusline stdin payload
 - no TUI parsing and no transcript reconstruction for current limits
 
 How to get data:
 
 1. configure a Claude Code statusline command in `~/.claude/settings.json` or `~/.config/claude/settings.json`
-2. run the command in statusline hook context so Claude Code provides JSON payload on stdin
-3. parse `rate_limits` from stdin payload
-4. normalize available live fields for current windows (5h/7d), used progress, and reset time
+2. Claude Code runs the configured command when it refreshes the statusline
+3. Claude Code passes a JSON payload to the command through stdin
+4. the command saves the latest valid payload to a local ai-limits cache file
+5. ai-limits reads the cache file and parses `rate_limits`
+6. ai-limits normalizes live fields for current windows (5h/7d), used progress, and reset time
 
 Behavior:
 
-- when hook payload includes `rate_limits`, this method can provide an official live signal for current Claude limits
-- when hook context is unavailable or payload has no `rate_limits`, method returns unavailable/unknown for live limits
+- when statusline payload includes `rate_limits`, this method provides an official live signal for current Claude limits
+- when statusline context is unavailable or payload has no `rate_limits`, method returns unavailable/unknown for live limits
 - this method is for current live limits, not full historical usage aggregation
+- this method primarily covers Claude Code CLI; Claude Desktop and browser-extension flows are not confirmed to run the same statusline command
 
 ---
 
@@ -147,8 +163,9 @@ Behavior:
 
 - for `claude_cli_usage`, full output remains a TUI stream and depends on current CLI text/layout
 - for `claude_cli_usage`, request/parse can take noticeable time
-- for `claude_statusline_rate_limits`, data is available only inside a properly configured Claude Code hook context
-- for `claude_statusline_rate_limits`, unavailable hook context means live limits are unavailable even if transcript history exists
+- for `claude_statusline_rate_limits`, data is available only after a properly configured Claude Code statusline command receives a payload
+- for `claude_statusline_rate_limits`, unavailable statusline context means live limits are unavailable even if transcript history exists
+- for `claude_local_usage`, reset remains an estimate unless a server reset anchor is available
 
 ---
 
@@ -158,7 +175,7 @@ Behavior:
 |---|---|---|
 | Official API | Not investigated | May apply to API accounts, but not necessarily to Claude Code subscription limits |
 | Local transcript JSONL (`claude_local_usage`) | Implemented in PoC | Scans local transcript roots and aggregates token usage history by assistant turns; official remaining limit/reset may be unavailable |
-| Claude Code statusline `rate_limits` | Candidate for live limits | Hook receives JSON via stdin from Claude Code and can provide an official live signal for 5h/7d limits; requires statusline configuration |
+| Claude Code statusline `rate_limits` | Live-limit method | Statusline command receives JSON via stdin from Claude Code and can provide an official live signal for 5h/7d limits; requires statusline configuration and cache capture |
 | Local SQLite/cache | Auxiliary layer | e.g. `~/.claude/usage.db` from `claude-usage`: convenient for dashboard and incremental scanning, but this is derived data, not a primary source |
 | Frontend/dashboard API | Research-only | Possible only with a clear and safe way to handle cookie/session tokens |
 | Traffic observation | Research-only | Not to be considered as a product mechanism |

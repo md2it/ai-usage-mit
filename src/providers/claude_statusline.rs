@@ -17,6 +17,12 @@ const CACHE_MAX_AGE: Duration = Duration::from_secs(600);
 const PROVIDER: &str = "claude";
 const SOURCE: &str = "claude_statusline_rate_limits";
 const SOURCE_LINK: &str = "docs/get-info/providers/claude.md";
+const CACHE_FILE_NAME: &str = "claude-statusline-rate-limits.json";
+const STATUSLINE_NOT_CONFIGURED_MESSAGE: &str = concat!(
+    "Claude statusline is not configured yet. ",
+    "To enable live Claude Code limits, give Claude Code this setup prompt: ",
+    "https://github.com/md2it/ai-limits/blob/main/docs/setup/claude-statusline.md"
+);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum PayloadOrigin {
@@ -40,12 +46,14 @@ struct RateLimits {
 struct RateLimitWindow {
     used_percent: Option<f64>,
     window_minutes: Option<u64>,
-    resets_at: Option<u64>,
+    resets_at: Option<String>,
 }
 
 pub fn collect() -> io::Result<SourceData> {
     if let Some(payload) = read_hook_payload_from_stdin()? {
-        write_cache(&payload)?;
+        if payload_has_supported_rate_limits(&payload) {
+            write_cache(&payload)?;
+        }
         return Ok(build_source_data_with_origin(payload, PayloadOrigin::Hook));
     }
 
@@ -56,9 +64,7 @@ pub fn collect() -> io::Result<SourceData> {
         ));
     }
 
-    Ok(unavailable_source_data(
-        "no hook stdin payload; configure Claude Code statusline to capture payload or use --claude-cli",
-    ))
+    Ok(unavailable_source_data(STATUSLINE_NOT_CONFIGURED_MESSAGE))
 }
 
 pub fn structured_from_payload(payload: &str, from_cache: bool) -> StructuredSourceInfo {
@@ -284,7 +290,9 @@ fn origin_diagnostics(origin: PayloadOrigin) -> Vec<String> {
     match origin {
         PayloadOrigin::Hook => vec!["data origin: hook stdin".to_string()],
         PayloadOrigin::Cache(_) => {
-            vec!["data origin: cache (~/.config/ai-limits/claude-hook-payload.json)".to_string()]
+            vec![format!(
+                "data origin: cache (~/.config/ai-limits/{CACHE_FILE_NAME})"
+            )]
         }
     }
 }
@@ -328,7 +336,7 @@ fn structured_limit(
         name: name.to_string(),
         window_label: Some(window_label.to_string()),
         window_minutes: window.window_minutes,
-        resets_at: window.resets_at.map(format_unix_utc),
+        resets_at: window.resets_at.clone(),
         used_percent,
         remaining_percent: used_percent.map(remaining_percent),
         used_amount: None,
@@ -379,7 +387,7 @@ fn cache_path() -> io::Result<PathBuf> {
     Ok(PathBuf::from(home)
         .join(".config")
         .join("ai-limits")
-        .join("claude-hook-payload.json"))
+        .join(CACHE_FILE_NAME))
 }
 
 fn write_cache(payload: &str) -> io::Result<()> {
@@ -415,6 +423,20 @@ fn locate_rate_limits(record: &Value) -> Option<&Value> {
     record
         .get("rate_limits")
         .or_else(|| record.pointer("/payload/rate_limits"))
+}
+
+fn payload_has_supported_rate_limits(payload: &str) -> bool {
+    let Ok(record) = serde_json::from_str::<Value>(payload.trim()) else {
+        return false;
+    };
+    let Some(rate_limits_value) = locate_rate_limits(&record) else {
+        return false;
+    };
+
+    let rate_limits = parse_rate_limits(rate_limits_value);
+    !build_structured_limits(&rate_limits).is_empty()
+        || rate_limits.credits.is_some()
+        || rate_limits.plan_type.is_some()
 }
 
 fn parse_rate_limits(value: &Value) -> RateLimits {
@@ -474,9 +496,10 @@ fn parse_rate_limit_window(value: Option<&Value>) -> Option<RateLimitWindow> {
     let used_percent = value
         .get("used_percent")
         .or_else(|| value.get("used_percentage"))
-        .and_then(number_f64_any);
+        .and_then(number_f64_any)
+        .map(normalize_percent);
     let window_minutes = value.get("window_minutes").and_then(number_u64_any);
-    let resets_at = value.get("resets_at").and_then(number_u64_any);
+    let resets_at = value.get("resets_at").and_then(normalize_reset_at);
 
     if used_percent.is_none() && window_minutes.is_none() && resets_at.is_none() {
         return None;
@@ -487,6 +510,10 @@ fn parse_rate_limit_window(value: Option<&Value>) -> Option<RateLimitWindow> {
         window_minutes,
         resets_at,
     })
+}
+
+fn normalize_percent(value: f64) -> f64 {
+    (value.clamp(0.0, 100.0) * 10.0).round() / 10.0
 }
 
 fn number_u64_any(value: &Value) -> Option<u64> {
@@ -501,6 +528,26 @@ fn number_f64_any(value: &Value) -> Option<f64> {
         return Some(number);
     }
     value.as_str().and_then(|raw| raw.parse::<f64>().ok())
+}
+
+fn normalize_reset_at(value: &Value) -> Option<String> {
+    if let Some(seconds) = number_u64_any(value) {
+        return Some(format_unix_utc(seconds));
+    }
+
+    let raw = value.as_str()?.trim();
+    if raw.is_empty() {
+        return None;
+    }
+
+    DateTime::parse_from_rfc3339(raw)
+        .map(|timestamp| {
+            timestamp
+                .with_timezone(&Utc)
+                .format("%Y-%m-%dT%H:%M:%SZ")
+                .to_string()
+        })
+        .ok()
 }
 
 fn format_unix_utc(seconds: u64) -> String {
@@ -590,6 +637,73 @@ mod tests {
     }
 
     #[test]
+    fn normalizes_statusline_percentages_and_unix_resets_for_five_hour_and_seven_day() {
+        let payload = r#"{
+  "payload": {
+    "rate_limits": {
+      "five_hour": {"used_percentage": "100.04", "resets_at": "1782721800"},
+      "seven_day": {"used_percentage": -0.04, "resets_at": 1782813600}
+    }
+  }
+}"#;
+
+        let structured = structured_from_payload(payload, false);
+
+        assert!(structured.status.data_available);
+        assert_eq!(structured.limits.len(), 2);
+        assert_eq!(structured.limits[0].name, "five_hour");
+        assert_eq!(structured.limits[0].window_minutes, Some(300));
+        assert_eq!(structured.limits[0].used_percent, Some(100.0));
+        assert_eq!(structured.limits[0].remaining_percent, Some(0.0));
+        assert_eq!(
+            structured.limits[0].resets_at.as_deref(),
+            Some("2026-06-29T08:30:00Z")
+        );
+        assert_eq!(structured.limits[1].name, "seven_day");
+        assert_eq!(structured.limits[1].window_minutes, Some(10080));
+        assert_eq!(structured.limits[1].used_percent, Some(0.0));
+        assert_eq!(structured.limits[1].remaining_percent, Some(100.0));
+        assert_eq!(
+            structured.limits[1].resets_at.as_deref(),
+            Some("2026-06-30T10:00:00Z")
+        );
+    }
+
+    #[test]
+    fn normalizes_rfc3339_reset_timestamps_to_utc_seconds() {
+        let payload = r#"{
+  "rate_limits": {
+    "five_hour": {
+      "used_percentage": 42.24,
+      "resets_at": "2026-06-29T11:30:00+03:00"
+    }
+  }
+}"#;
+
+        let structured = structured_from_payload(payload, false);
+
+        assert!(structured.status.data_available);
+        assert_eq!(structured.limits.len(), 1);
+        assert_eq!(structured.limits[0].used_percent, Some(42.2));
+        assert_eq!(
+            structured.limits[0].resets_at.as_deref(),
+            Some("2026-06-29T08:30:00Z")
+        );
+    }
+
+    #[test]
+    fn only_supported_rate_limit_payloads_are_cacheable() {
+        assert!(payload_has_supported_rate_limits(STATUSLINE_PAYLOAD));
+        assert!(!payload_has_supported_rate_limits(
+            r#"{"rate_limits":{"five_hour":{"foo":"bar"}}}"#
+        ));
+        assert!(!payload_has_supported_rate_limits(
+            r#"{"payload":{"session_id":"abc"}}"#
+        ));
+        assert!(!payload_has_supported_rate_limits("{invalid"));
+    }
+
+    #[test]
     fn structured_data_marks_missing_rate_limits_as_accessible_but_unavailable() {
         let payload = r#"{"hook_event":"statusline","payload":{"session_id":"abc"}}"#;
         let data = build_source_data(payload.to_string(), false);
@@ -629,16 +743,22 @@ mod tests {
 
     #[test]
     fn structured_data_marks_no_access_when_hook_context_missing() {
-        let data = unavailable_source_data("hook context unavailable");
+        let data = unavailable_source_data(STATUSLINE_NOT_CONFIGURED_MESSAGE);
 
         assert!(data.raw.is_none());
         assert!(!data.structured.status.access_available);
         assert!(!data.structured.status.data_available);
         assert!(!data.structured.raw_data_available);
-        assert_eq!(
-            data.structured.status.message.as_deref(),
-            Some("hook context unavailable")
-        );
+        let message = data
+            .structured
+            .status
+            .message
+            .as_deref()
+            .expect("message should explain setup");
+        assert!(message.contains("Claude statusline is not configured yet"));
+        assert!(message.contains(
+            "https://github.com/md2it/ai-limits/blob/main/docs/setup/claude-statusline.md"
+        ));
     }
 
     #[test]
