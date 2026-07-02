@@ -24,6 +24,7 @@ Options:
   --usage          Show user-facing usage summary
   --raw, -r        Return raw source data
   --structured, -s Return structured source data
+  --watch, -w      Repeat the query on an interval
 
 Technical source options:
   --codex-local    Query Codex from local session JSONL files
@@ -38,18 +39,21 @@ Examples:
   ai-limits --all --usage
   ai-limits --all --raw
   ai-limits --all --structured
+  ai-limits --watch
+  ai-limits --watch=10m
 
 Config:
   ~/.config/ai-limits/config.toml
 
   default_sources = ["codex_local", "claude_local", "cursor_api2"]
+  watch_interval = "5m"
 
 
 =-=-=-=-=-=-=-=-=-=-=-=-=-= DONE =-=-=-=-=-=-=-=-=-=-=-=-=-=
 
 ```
 
-Default output is the user-facing limits presentation. `--usage` is the user-facing usage presentation. `--raw` and `--structured` are technical output modes for source-level data. They support development, testing, and provider contract checks.
+Default output is the user-facing limits presentation. `--usage` is the user-facing usage presentation. `--raw` and `--structured` are technical output modes for source-level data. They support development, testing, and provider contract checks. `--watch` repeats the default query on an interval; see [Watch Mode](#watch-mode).
 
 Technical source options are working source selectors, but they are primarily intended for intermediate source-level workflows.
 
@@ -283,6 +287,14 @@ On each update:
 When a source finishes, the loader is cleared before the result is printed.
 
 When `TerminalUi` shuts down, the loader is cleared via `Drop`.
+
+---
+
+## Watch Mode
+
+`--watch`/`-w` repeats the query on a fixed interval instead of running once. `--watch={duration}` (for example `--watch=10m`) sets the interval for that run; without a value, the interval comes from the config.
+
+Each cycle prints a full response inside the common frame, exactly as a single default run would. Cycles repeat until the process is interrupted (`Ctrl+C`).
 
 ---
 

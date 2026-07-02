@@ -23,7 +23,8 @@ For the user, the app acts as a local assistant: it collects available usage and
   - **CLI** (`--claude-cli`) — reads limits via the Claude CLI `/usage` command.
   - **local** (`--claude-local`, default) — aggregates token usage history from local transcript JSONL files.
 - **Cursor** (`--cursor-api2`) — reads usage from `api2.cursor.sh` using a token from `cursor agent login`; if the API is unavailable, falls back to `cursor agent about/status`.
-- **Config** — optional `~/.config/ai-limits/config.toml` with `default_sources`; create with `--init-config`.
+- **Watch mode** (`--watch`, `-w`) — repeats the query on an interval (`--watch=10m`); without a value, the interval comes from the config.
+- **Config** — optional `~/.config/ai-limits/config.toml`; create with `--init-config`.
 
 Run from the repository:
 
@@ -36,6 +37,7 @@ Supported flags are:
 - `--help`, `-h`
 - `--init-config`
 - `--all`, `-a`
+- `--watch`, `-w`
 - `--codex-local`
 - `--codex-cli`
 - `--claude-hook`
@@ -61,23 +63,21 @@ Query only selected sources by passing source flags:
 ./bin/ai-limits --codex-local --cursor-api2
 ```
 
-`--all` and `-a` force all current sources, even when the config defines a narrower default. When no source is selected, the command uses config defaults or, if no config exists, the built-in defaults: Codex local, Claude local, Cursor API.
+`--all` and `-a` force all current sources, even when the config defines a narrower default. When no source is selected, the command uses config defaults.
 
-Optional config path:
+Repeat the query on an interval:
 
-```text
-~/.config/ai-limits/config.toml
+```sh
+./bin/ai-limits --watch
 ```
 
-Example:
+Repeat the query on a custom interval, overriding the config for that run:
 
-```toml
-default_sources = [
-  "codex_local",
-  "claude_local",
-  "cursor_api2"
-]
+```sh
+./bin/ai-limits --watch=10m
 ```
+
+Config path: `~/.config/ai-limits/config.toml`.
 
 CLI-backed sources use the standard `codex`, `claude`, and `cursor` CLIs. Local sources read provider files from the user's home directory.
 
